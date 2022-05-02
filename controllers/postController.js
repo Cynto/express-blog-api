@@ -22,7 +22,7 @@ exports.post_update_put = (req, res, next) => {
   res.send('NOT IMPLEMENTED: Post update POST');
 };
 
-// Handle post delete on POST.
+// Handle post delete on DELETE.
 exports.post_delete_post = (req, res, next) => {
-  res.send('NOT IMPLEMENTED: Post delete POST');
+  res.send('NOT IMPLEMENTED: Post delete DELETE');
 };

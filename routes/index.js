@@ -34,7 +34,7 @@ router.get('/posts', postController.post_list_get);
 router.get('/posts/:id', postController.post_detail_get);
 
 // PUT request to update post.
-router.put('/posts/:id', postController.post_update_post);
+router.put('/posts/:id', postController.post_update_put);
 
 // DELETE request to delete post.
 router.delete('/posts/:id', postController.post_delete_post);
