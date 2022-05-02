@@ -91,7 +91,27 @@ exports.user_detail_get = (req, res, next) => {
 
 // Handle user login on POST.
 exports.user_login_post = (req, res, next) => {
-  res.send('NOT IMPLEMENTED: User login POST');
+  passport.authenticate('local', { session: false }, (err, user, info) => {
+    if (err) {
+      return next(err);
+    }
+    if (!user) {
+      return res.status(401).json({
+        message: 'Invalid email or password.',
+      });
+    }
+    req.login(user, { session: false }, (err) => {
+      if (err) {
+        return next(err);
+      }
+      // Generate JWT.
+      const token = jwt.sign(user.toJSON(), process.env.JWT_SECRET);
+      return res.json({
+        user,
+        token,
+      });
+    });
+  })(req, res, next);
 };
 
 // Display user logout on GET.
