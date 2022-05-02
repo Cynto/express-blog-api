@@ -20,6 +20,10 @@ const PostSchema = new Schema({
     minlength: 1,
     maxlength: 20,
   },
+  user: {
+    type: Schema.Types.ObjectId,
+    ref: 'User',
+  },
   published: {
     type: Boolean,
     default: false,
