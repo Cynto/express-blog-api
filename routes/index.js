@@ -3,6 +3,7 @@ const router = express.Router();
 
 const userController = require('../controllers/userController');
 const postController = require('../controllers/postController');
+const commentController = require('../controllers/commentController');
 
 /// USER ROUTES ///
 
@@ -38,5 +39,24 @@ router.put('/posts/:id', postController.post_update_post);
 // DELETE request to delete post.
 router.delete('/posts/:id', postController.post_delete_post);
 
+/// COMMENT ROUTES ///
+
+// POST request for creating Comment.
+router.post('/posts/:postId/comments', commentController.comment_create_post);
+
+// GET request for list of all comments.
+router.get('/posts/:postId/comments', commentController.comment_list_get);
+
+// GET request for one comment.
+router.get('/posts/:postId/comments/:id', commentController.comment_detail_get);
+
+// PUT request to update comment.
+router.put('/posts/:postId/comments/:id', commentController.comment_update_put);
+
+// DELETE request to delete comment.
+router.delete(
+  '/posts/:postId/comments/:id',
+  commentController.comment_delete_delete
+);
 
 module.exports = router;
