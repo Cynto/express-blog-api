@@ -6,16 +6,16 @@ const UserSchema = new Schema({
     type: String,
     required: true,
     unique: true,
-    minlength: 3,
-    maxlength: 15,
+    minlength: 6,
+    maxlength: 40,
   },
-  fName: {
+  firstName: {
     type: String,
     required: true,
     minlength: 3,
     maxlength: 15,
   },
-  lName: {
+  lastName: {
     type: String,
     required: true,
     minlength: 3,
