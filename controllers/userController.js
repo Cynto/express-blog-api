@@ -5,15 +5,29 @@ const { body, validationResult } = require('express-validator');
 const bcrypt = require('bcryptjs');
 const passport = require('passport');
 const jwt = require('jsonwebtoken');
+const debug = require('debug')('userController');
+
+// send user data on GET.
+exports.user_get = (req, res, next) => {
+  passport.authenticate('jwt', { session: false }, (err, user, info) => {
+    if (err) {
+      return next(err);
+    }
+    if (!user) {
+      return res.send(false);
+    }
+    return res.send(user);
+  })(req, res, next);
+}
 
 // Handle user create on POST.
 exports.user_create_post = [
   // Validate fields.
-  body('first-name', 'First name must include at least 3 characters.')
+  body('firstName', 'First name must include at least 3 characters.')
     .isLength({ min: 3 })
     .trim()
     .escape(),
-  body('last-name', 'Last name must include at least 3 characters.')
+  body('lastName', 'Last name must include at least 3 characters.')
     .isLength({ min: 3 })
     .trim()
     .escape(),
@@ -24,25 +38,25 @@ exports.user_create_post = [
     .isLength({ min: 8 })
     .trim()
     .escape(),
-  body('confirm-password', 'Passwords must match.').custom((value, { req }) => {
-    if (value !== req.body.password) {
-      throw new Error('Passwords must match.');
-    }
-    return true;
-  }),
+  body('confirmPassword', 'Passwords must match.')
+    .custom((value, { req }) => {
+      if (value !== req.body.password) {
+        throw new Error('Passwords must match.');
+      }
+      return true;
+    })
+    .trim()
+    .escape(),
   // Process request after validation and sanitization.
   (req, res, next) => {
     // Extract the validation errors from a request.
     const errors = validationResult(req);
+    console.log(req.body);
 
     // If there are no errors, save user to database.
     if (!errors.isEmpty()) {
       // There are errors. Render form again with sanitized values/error messages.
-      res.render('user_form', {
-        title: 'Create User',
-        user: user,
-        errors: errors.array(),
-      });
+      res.send(errors.array());
     } else {
       User.findOne({ email: req.body.email }, (err, user) => {
         if (err) {
@@ -65,12 +79,14 @@ exports.user_create_post = [
               password: hash,
             });
             // Save user to database.
+
             user.save((err) => {
               if (err) {
                 return next(err);
               }
               // Successful - redirect to new user record.
-              res.redirect(user.url);
+              debug(`New user created: ${user.firstName} ${user.lastName}`);
+              next();
             });
           });
         }
@@ -78,16 +94,6 @@ exports.user_create_post = [
     }
   },
 ];
-
-// Display list of all users.
-exports.user_list_get = (req, res, next) => {
-  res.send('NOT IMPLEMENTED: User list GET');
-};
-
-// Display detail page for a specific user.
-exports.user_detail_get = (req, res, next) => {
-  res.send('NOT IMPLEMENTED: User detail GET');
-};
 
 // Handle user login on POST.
 exports.user_login_post = (req, res, next) => {
@@ -104,6 +110,7 @@ exports.user_login_post = (req, res, next) => {
       if (err) {
         return next(err);
       }
+      debug(`User ${user.firstName} ${user.lastName} logged in.`);
       // Generate JWT.
       const token = jwt.sign(user.toJSON(), process.env.JWT_SECRET);
       return res.json({
@@ -116,5 +123,6 @@ exports.user_login_post = (req, res, next) => {
 
 // Display user logout on GET.
 exports.user_logout_get = (req, res, next) => {
-  res.send('NOT IMPLEMENTED: User logout GET');
+  req.logout();
+  res.redirect('/');
 };
