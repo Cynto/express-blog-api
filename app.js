@@ -4,12 +4,14 @@ var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 var sassMiddleware = require('node-sass-middleware');
-require('dotenv').config();
+const cors = require('cors');
 
-var indexRouter = require('./routes/index');
+require('dotenv').config();
 
 const db = require('./config/database');
 require('./config/passport');
+
+var indexRouter = require('./routes/index');
 
 var app = express();
 
@@ -17,6 +19,7 @@ var app = express();
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
 
+app.use(cors());
 app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
