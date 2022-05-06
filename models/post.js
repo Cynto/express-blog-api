@@ -14,6 +14,10 @@ const PostSchema = new Schema({
     minlength: 5,
     maxlength: 1500,
   },
+  image: {
+    type: String,
+    required: false,
+  },
   tags: {
     type: [String],
     required: true,
