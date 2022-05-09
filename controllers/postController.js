@@ -2,9 +2,13 @@ const User = require('../models/user');
 const Post = require('../models/post');
 const Comment = require('../models/comment');
 const { body, validationResult } = require('express-validator');
+const passport = require('passport');
+const debug = require('debug')('postController');
 
 // Handle post create on POST.
 exports.post_create_post = [
+  passport.authenticate('jwt', { session: false }),
+
   // Validate fields.
   body('title', 'Title must include between 5 and 100 characters.')
     .isLength({ min: 5, max: 100 })
@@ -12,13 +16,16 @@ exports.post_create_post = [
     .escape(),
   body('content', 'Content must include between 5 and 1500 characters.')
     .isLength({ min: 5, max: 1500 })
-    .trim()
-    .escape(),
-  body('image', 'Image must be a valid URL.').isURL().trim(),
-  body('tags', 'Tags must include between 1 and 20 characters.')
-    .isLength({ min: 1, max: 20 })
-    .trim()
-    .escape(),
+    .trim(),
+  body('image', 'Image must be a valid URL.')
+    .optional({ checkFalsy: true })
+    .isURL()
+    .trim(),
+  body('tags', 'There must be between 1 and 20 tags.').isArray({
+    min: 1,
+    max: 20,
+  }),
+
   // Process request after validation and sanitization.
   (req, res, next) => {
     // Extract the validation errors from a request.
@@ -38,11 +45,14 @@ exports.post_create_post = [
         user: req.user._id,
         published: false,
       });
+
       post.save((err) => {
         if (err) {
           return next(err);
         }
-        return res.send(post);
+        debug(`New post created: ${post.title}`);
+
+        res.json({ post });
       });
     }
   },
