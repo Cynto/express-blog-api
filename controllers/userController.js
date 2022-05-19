@@ -14,21 +14,33 @@ exports.user_get = (req, res, next) => {
       return next(err);
     }
     if (!user) {
-      return res.send(false);
+      return res.json(null);
     }
-    return res.send(user);
+    const userObj = {
+      _id: user._id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      loggedIn: true,
+    };
+    return res.json(userObj);
   })(req, res, next);
-}
+};
 
 // Handle user create on POST.
 exports.user_create_post = [
   // Validate fields.
-  body('firstName', 'First name must include at least 3 characters.')
+  body('firstName')
     .isLength({ min: 3 })
+    .withMessage('First name must include at least 3 characters.')
+    .isAlpha()
+    .withMessage('First name must only include letters.')
     .trim()
     .escape(),
-  body('lastName', 'Last name must include at least 3 characters.')
+  body('lastName')
     .isLength({ min: 3 })
+    .withMessage('Last name must include at least 3 characters.')
+    .isAlpha()
+    .withMessage('Last name must only include letters.')
     .trim()
     .escape(),
   body('email', 'Email must be a valid email address.')
@@ -56,7 +68,10 @@ exports.user_create_post = [
     // If there are no errors, save user to database.
     if (!errors.isEmpty()) {
       // There are errors. Render form again with sanitized values/error messages.
-      res.send(errors.array());
+      res.status(401).send({
+        errors: errors.array(),
+      });
+      console.log(errors.array());
     } else {
       User.findOne({ email: req.body.email }, (err, user) => {
         if (err) {
@@ -64,7 +79,16 @@ exports.user_create_post = [
         }
         if (user) {
           // User exists, redirect to login page.
-          res.redirect('/login');
+          res.status(401).json({
+            errors: [
+              {
+                msg: 'User with that email already exists.',
+                value: req.body.email,
+                param: 'email',
+                location: 'body',
+              },
+            ],
+          });
         } else {
           // Hash password.
           bcrypt.hash(req.body.password, 10, (err, hash) => {
@@ -77,16 +101,24 @@ exports.user_create_post = [
               lastName: req.body.lastName,
               email: req.body.email,
               password: hash,
+              isAdmin: false,
             });
             // Save user to database.
 
             user.save((err) => {
               if (err) {
+                debug(err);
                 return next(err);
               }
               // Successful - redirect to new user record.
               debug(`New user created: ${user.firstName} ${user.lastName}`);
-              next();
+              res.json({
+                user: {
+                  _id: user._id,
+                  firstName: user.firstName,
+                  lastName: user.lastName,
+                },
+              });
             });
           });
         }
@@ -103,7 +135,14 @@ exports.user_login_post = (req, res, next) => {
     }
     if (!user) {
       return res.status(401).json({
-        message: 'Invalid email or password.',
+        errors: [
+          {
+            msg: 'Invalid email or password.',
+            param: 'email',
+            value: '',
+            location: 'body',
+          },
+        ],
       });
     }
     req.login(user, { session: false }, (err) => {

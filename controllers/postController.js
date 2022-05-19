@@ -35,7 +35,9 @@ exports.post_create_post = [
     // If there are no errors, save user to database.
     if (!errors.isEmpty()) {
       // There are errors. Render form again with sanitized values/error messages.
-      res.send(errors.array());
+      res.status(401).send({
+        errors: errors.array(),
+      });
     } else {
       const post = new Post({
         title: req.body.title,
