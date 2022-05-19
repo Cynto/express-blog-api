@@ -5,6 +5,8 @@ var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 var sassMiddleware = require('node-sass-middleware');
 const cors = require('cors');
+const compression = require('compression');
+const helmet = require('helmet');
 
 require('dotenv').config();
 
@@ -14,6 +16,7 @@ require('./config/passport');
 var indexRouter = require('./routes/index');
 
 var app = express();
+app.use(helmet());
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
@@ -32,6 +35,7 @@ app.use(
     sourceMap: true,
   })
 );
+app.use(compression());
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', indexRouter);
