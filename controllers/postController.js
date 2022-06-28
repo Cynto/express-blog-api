@@ -21,10 +21,12 @@ exports.post_create_post = [
     .optional({ checkFalsy: true })
     .isURL()
     .trim(),
-  body('tags', 'There must be between 1 and 20 tags.').isArray({
-    min: 1,
-    max: 20,
-  }),
+  body('tags', 'There must be between 1 and 20 tags.')
+    .isArray({
+      min: 1,
+      max: 20,
+    })
+    .isLength({ min: 1, max: 20 }),
 
   // Process request after validation and sanitization.
   (req, res, next) => {
@@ -39,11 +41,15 @@ exports.post_create_post = [
         errors: errors.array(),
       });
     } else {
+      let url = req.body.title.toLowerCase();
+      url = url.replace(' ', '-');
       const post = new Post({
         title: req.body.title,
+        url,
         content: req.body.content,
         image: req.body.image,
         tags: req.body.tags,
+        frontBanner: req.body.frontBanner,
         user: req.user._id,
         published: false,
       });
@@ -62,7 +68,21 @@ exports.post_create_post = [
 
 // Display list of all posts.
 exports.post_list_get = (req, res, next) => {
-  res.send('NOT IMPLEMENTED: Post list GET');
+  if (req.headers.frontpage) {
+    Post.find({ published: true })
+      .lean()
+      .populate('user', 'firstName lastName')
+      .populate('comments')
+      .limit(10)
+      .exec((err, posts) => {
+        if (err) {
+          console.log(err);
+          return next(err);
+        }
+        console.log(posts);
+        res.json(posts);
+      });
+  }
 };
 
 // Display single post page.
