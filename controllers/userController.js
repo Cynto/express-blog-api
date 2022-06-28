@@ -21,6 +21,7 @@ exports.user_get = (req, res, next) => {
       firstName: user.firstName,
       lastName: user.lastName,
       loggedIn: true,
+      isAdmin: user.isAdmin,
     };
     return res.json(userObj);
   })(req, res, next);
@@ -53,7 +54,7 @@ exports.user_create_post = [
   body('confirmPassword', 'Passwords must match.')
     .custom((value, { req }) => {
       if (value !== req.body.password) {
-        throw new Error('Passwords must match.');
+        throw new Error('Passwords do not match.');
       }
       return true;
     })
