@@ -28,7 +28,19 @@ const PostSchema = new Schema({
     type: Schema.Types.ObjectId,
     ref: 'User',
   },
+  comments: [
+    {
+      type: Schema.Types.ObjectId,
+      ref: 'Comment',
+    },
+  ],
+
   published: {
+    type: Boolean,
+    default: false,
+  },
+
+  featured: {
     type: Boolean,
     default: false,
   },
