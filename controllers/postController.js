@@ -10,12 +10,18 @@ exports.post_create_post = [
   passport.authenticate('jwt', { session: false }),
 
   // Validate fields.
-  body('title', 'Title must include between 5 and 100 characters.')
-    .isLength({ min: 5, max: 100 })
+  body('title')
+    .isLength({ min: 36 })
+    .withMessage('Title must include at least 36 characters.')
+    .isLength({ max: 50 })
+    .withMessage('Title must not include over 50 characters.')
     .trim()
     .escape(),
-  body('content', 'Content must include between 5 and 1500 characters.')
-    .isLength({ min: 5, max: 1500 })
+  body('content')
+    .isLength({ min: 80 })
+    .withMessage('Content must include at least 80 characters.')
+    .isLength({ max: 2500 })
+    .withMessage('Content must not include over 2500 characters.')
     .trim(),
   body('image', 'Image must be a valid URL.')
     .optional({ checkFalsy: true })
@@ -42,7 +48,7 @@ exports.post_create_post = [
       });
     } else {
       let url = req.body.title.toLowerCase();
-      url = url.replace(' ', '-');
+      url = url.replaceAll(' ', '-');
       const post = new Post({
         title: req.body.title,
         url,
@@ -51,7 +57,8 @@ exports.post_create_post = [
         tags: req.body.tags,
         frontBanner: req.body.frontBanner,
         user: req.user._id,
-        published: false,
+        published: req.body.published,
+        featured: req.body.featured,
       });
 
       post.save((err) => {
@@ -59,7 +66,7 @@ exports.post_create_post = [
           return next(err);
         }
         debug(`New post created: ${post.title}`);
-
+        console.log(post);
         res.json({ post });
       });
     }
