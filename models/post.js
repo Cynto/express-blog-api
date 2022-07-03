@@ -5,14 +5,18 @@ const PostSchema = new Schema({
   title: {
     type: String,
     required: true,
-    minlength: 5,
-    maxlength: 100,
+    minlength: 35,
+    maxlength: 50,
+  },
+  url: {
+    type: String,
+    required: true,
   },
   content: {
     type: String,
     required: true,
-    minlength: 5,
-    maxlength: 1500,
+    minlength: 80,
+    maxlength: 2500,
   },
   image: {
     type: String,
