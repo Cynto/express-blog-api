@@ -49,25 +49,35 @@ exports.post_create_post = [
     } else {
       let url = req.body.title.toLowerCase();
       url = url.replaceAll(' ', '-');
-      const post = new Post({
-        title: req.body.title,
-        url,
-        content: req.body.content,
-        image: req.body.image,
-        tags: req.body.tags,
-        frontBanner: req.body.frontBanner,
-        user: req.user._id,
-        published: req.body.published,
-        featured: req.body.featured,
-      });
-
-      post.save((err) => {
+      // check if url already exists
+      Post.findOne({ url: url }, (err, post) => {
         if (err) {
           return next(err);
         }
-        debug(`New post created: ${post.title}`);
-        console.log(post);
-        res.json({ post });
+        if (post) {
+          url = `${url}-${Math.random().toString(36).slice(2)}`;
+        }
+
+        const newPost = new Post({
+          title: req.body.title,
+          url,
+          content: req.body.content,
+          image: req.body.image,
+          tags: req.body.tags,
+          frontBanner: req.body.frontBanner,
+          user: req.user._id,
+          published: req.body.published,
+          featured: req.body.featured,
+        });
+
+        newPost.save((err) => {
+          if (err) {
+            return next(err);
+          }
+          debug(`New post created: ${post.title}`);
+          console.log(newPost);
+          res.json({ newPost });
+        });
       });
     }
   },
