@@ -4,6 +4,7 @@ const router = express.Router();
 const userController = require('../controllers/userController');
 const postController = require('../controllers/postController');
 const commentController = require('../controllers/commentController');
+const replyController = require('../controllers/replyController');
 
 /// USER ROUTES ///
 
@@ -28,7 +29,7 @@ router.post('/posts', postController.post_create_post);
 router.get('/posts', postController.post_list_get);
 
 // GET request for one post.
-router.get('/posts/:id', postController.post_detail_get);
+router.get('/posts/:url', postController.post_detail_get);
 
 // PUT request to update post.
 router.put('/posts/:id', postController.post_update_put);
@@ -47,13 +48,30 @@ router.get('/posts/:postId/comments', commentController.comment_list_get);
 // GET request for one comment.
 router.get('/posts/:postId/comments/:id', commentController.comment_detail_get);
 
-// PUT request to update comment.
-router.put('/posts/:postId/comments/:id', commentController.comment_update_put);
-
 // DELETE request to delete comment.
 router.delete(
   '/posts/:postId/comments/:id',
   commentController.comment_delete_delete
+);
+
+/// REPLY ROUTES ///
+
+// POST request for creating Reply.
+router.post(
+  '/posts/:postId/comments/:commentId/replies',
+  replyController.reply_create_post
+);
+
+// GET request for list of all replies.
+router.get(
+  '/posts/:postId/comments/:commentId/replies',
+  replyController.reply_list_get
+);
+
+// DELETE request to delete reply.
+router.delete(
+  '/posts/:postId/comments/:commentId/replies/:id',
+  replyController.reply_delete_delete
 );
 
 module.exports = router;
