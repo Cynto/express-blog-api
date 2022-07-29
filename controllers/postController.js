@@ -58,6 +58,15 @@ exports.post_create_post = [
           url = `${url}-${Math.random().toString(36).slice(2)}`;
         }
 
+        // If featured, set all other posts to featured to false.
+        if (req.body.featured) {
+          Post.updateMany({ featured: true }, { featured: false }, (err) => {
+            if (err) {
+              return next(err);
+            }
+          });
+        }
+
         const newPost = new Post({
           title: req.body.title,
           url,
@@ -74,9 +83,9 @@ exports.post_create_post = [
           if (err) {
             return next(err);
           }
-          debug(`New post created: ${post.title}`);
+          debug(`New post created: ${newPost.title}`);
           console.log(newPost);
-          res.json({ newPost });
+          res.json({ post: newPost });
         });
       });
     }
@@ -104,7 +113,19 @@ exports.post_list_get = (req, res, next) => {
 
 // Display single post page.
 exports.post_detail_get = (req, res, next) => {
-  res.send('NOT IMPLEMENTED: Post detail GET');
+  Post.findOne({ url: req.params.url })
+    .lean()
+    .populate('user', 'firstName lastName')
+
+    .exec((err, post) => {
+      if (err) {
+        return next(err);
+      }
+      if (!post) {
+        return res.status(404).send('Post not found.');
+      }
+      res.json(post);
+    });
 };
 
 // Handle post update on POST.
