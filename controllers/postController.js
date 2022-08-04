@@ -92,24 +92,113 @@ exports.post_create_post = [
   },
 ];
 
+// Display list of published posts.
+exports.post_published_get = (req, res, next) => {
+  // Check sort header for sort order.
+  const sort = req.headers.sort || '-createdAt';
+  const limit = req.headers.limit || 12;
+
+  Post.find({
+    published: true,
+  })
+    .populate('user', 'firstName lastName')
+    .sort(sort)
+    .limit(limit)
+    .exec((err, posts) => {
+      if (err) {
+        return next(err);
+      }
+      res.json(posts);
+    });
+};
+
 // Display list of all posts.
-exports.post_list_get = (req, res, next) => {
-  if (req.headers.frontpage) {
-    Post.find({ published: true })
-      .lean()
-      .populate('user', 'firstName lastName')
-      .populate('comments')
-      .limit(10)
-      .exec((err, posts) => {
+exports.post_list_get = [
+  passport.authenticate('jwt', { session: false }),
+  (req, res, next) => {
+    let sort = req.headers.sort || '-createdAt';
+
+    const limit = req.headers.limit || 12;
+
+    if (sort !== 'comments') {
+      Post.find({})
+        .lean()
+        .populate('user', 'firstName lastName')
+        .populate('comments')
+        .sort(sort)
+        .limit(limit)
+        .exec((err, posts) => {
+          if (err) {
+            console.log(err);
+            return next(err);
+          }
+          res.json(posts);
+        });
+    } else {
+      Post.aggregate([
+        {
+          $lookup: {
+            from: 'comments',
+            localField: '_id',
+            foreignField: 'post',
+            as: 'comments',
+          },
+        },
+
+        {
+          $addFields: {
+            commentsCount: { $size: '$comments' },
+          },
+        },
+
+        {
+          $sort: { commentsCount: -1 },
+        },
+        {
+          $limit: limit,
+        },
+        {
+          $lookup: {
+            from: 'users',
+            localField: 'user',
+            foreignField: '_id',
+            as: 'user',
+          },
+        },
+        {
+          $unwind: '$user',
+        },
+        {
+          $project: {
+            _id: 1,
+            title: 1,
+            url: 1,
+            content: 1,
+            image: 1,
+            tags: 1,
+            frontBanner: 1,
+            user: 1,
+            published: 1,
+            featured: 1,
+            comments: 1,
+            commentsCount: 1,
+            user: {
+              _id: 1,
+              firstName: '$user.firstName',
+              lastName: '$user.lastName',
+            },
+          },
+        },
+      ]).exec((err, posts) => {
+        console.log(posts);
         if (err) {
-          console.log(err);
           return next(err);
         }
-        console.log(posts);
         res.json(posts);
       });
-  }
-};
+    }
+  },
+];
 
 // Display single post page.
 exports.post_detail_get = (req, res, next) => {
