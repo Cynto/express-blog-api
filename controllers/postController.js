@@ -96,7 +96,7 @@ exports.post_create_post = [
 exports.post_published_get = (req, res, next) => {
   // Check sort header for sort order.
   const sort = req.headers.sort || '-createdAt';
-  const limit = req.headers.limit || 12;
+  const limit = Number(req.headers.limit) || 12;
 
   Post.find({
     published: true,
@@ -118,7 +118,7 @@ exports.post_list_get = [
   (req, res, next) => {
     let sort = req.headers.sort || '-createdAt';
 
-    const limit = req.headers.limit || 12;
+    const limit = Number(req.headers.limit) || 12;
 
     if (sort !== 'comments') {
       Post.find({})
@@ -190,7 +190,6 @@ exports.post_list_get = [
           },
         },
       ]).exec((err, posts) => {
-        console.log(posts);
         if (err) {
           return next(err);
         }
