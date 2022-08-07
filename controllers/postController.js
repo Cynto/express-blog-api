@@ -11,29 +11,41 @@ exports.post_create_post = [
 
   // Validate fields.
   body('title')
-    .isLength({ min: 36 })
-    .withMessage('Title must include at least 36 characters.')
+    .isLength({ min: 5 })
+    .withMessage('Title must include at least 5 characters.')
     .isLength({ max: 50 })
     .withMessage('Title must not include over 50 characters.')
     .trim()
     .escape(),
   body('content')
-    .isLength({ min: 80 })
-    .withMessage('Content must include at least 80 characters.')
-    .isLength({ max: 2500 })
-    .withMessage('Content must not include over 2500 characters.')
+    .isLength({ min: 5 })
+    .withMessage('Content must include at least 5 characters.')
+    .isLength({ max: 10000 })
+    .withMessage('Content must not include over 10000 characters.')
     .trim(),
-  body('image', 'Image must be a valid URL.')
-    .optional({ checkFalsy: true })
-    .isURL()
-    .trim(),
-  body('tags', 'There must be between 1 and 20 tags.')
-    .isArray({
-      min: 1,
-      max: 20,
+  body('image', 'Image must be a valid URL.').isURL().trim(),
+  body('tags')
+    .isArray({})
+    .custom((value) => {
+      if (value.length > 20) {
+        throw new Error('Tags must not include over 20 tags.');
+      }
+      if (value.length === 0) {
+        throw new Error('Tags must include at least 1 tag.');
+      }
+      return true;
     })
-    .isLength({ min: 1, max: 20 }),
-
+    .withMessage('There must be between 1 and 20 tags.')
+    .isLength({ min: 4, max: 20 })
+    .withMessage('Each tag must include between 4 and 20 characters.'),
+  body('published')
+    .isBoolean()
+    .withMessage('Published must be a boolean.')
+    .trim(),
+  body('featured')
+    .isBoolean()
+    .withMessage('Featured must be a boolean.')
+    .trim(),
   // Process request after validation and sanitization.
   (req, res, next) => {
     // Extract the validation errors from a request.
@@ -210,16 +222,104 @@ exports.post_detail_get = (req, res, next) => {
         return next(err);
       }
       if (!post) {
-        return res.status(404).send('Post not found.');
+        return res.status(404).json({
+          message: 'Post not found.',
+        });
       }
-      res.json(post);
+      res.json({ post });
     });
 };
 
 // Handle post update on POST.
-exports.post_update_put = (req, res, next) => {
-  res.send('NOT IMPLEMENTED: Post update POST');
-};
+exports.post_update_put = [
+  passport.authenticate('jwt', { session: false }),
+  // Validate fields.
+  body('title')
+    .isLength({ min: 5 })
+    .withMessage('Title must include at least 5 characters.')
+    .isLength({ max: 50 })
+    .withMessage('Title must not include over 50 characters.')
+    .trim()
+    .escape(),
+  body('content')
+    .isLength({ min: 5 })
+    .withMessage('Content must include at least 5 characters.')
+    .isLength({ max: 10000 })
+    .withMessage('Content must not include over 10000 characters.')
+    .trim(),
+  body('image', 'Image must be a valid URL.').isURL().trim(),
+  body('tags')
+    .isArray({})
+    .custom((value) => {
+      if (value.length > 20) {
+        throw new Error('Tags must not include over 20 tags.');
+      }
+      if (value.length === 0) {
+        throw new Error('Tags must include at least 1 tag.');
+      }
+      return true;
+    })
+    .withMessage('There must be between 1 and 20 tags.')
+    .isLength({ min: 4, max: 20 })
+    .withMessage('Each tag must include between 4 and 20 characters.'),
+  body('published')
+    .isBoolean()
+    .withMessage('Published must be a boolean.')
+    .trim(),
+  body('featured')
+    .isBoolean()
+    .withMessage('Featured must be a boolean.')
+    .trim(),
+
+  (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(422).json({ errors: errors.array() });
+    }
+    const { title, content, image, tags, published, featured } = req.body;
+    Post.findById(req.params.id, (err, post) => {
+      if (err) {
+        return next(err);
+      }
+      if (!post) {
+        return res.status(404).send('Post not found.');
+      }
+      if (post.user.toString() !== req.user._id.toString()) {
+        console.log('hi');
+        return res
+          .status(401)
+          .send('You are not authorized to edit this post.');
+      }
+      let url = title.toLowerCase().replace(/ /g, '-');
+      // Check if url is already taken.
+      Post.findOne({ url: url }, (err, postWithUrl) => {
+        if (err) {
+          return next(err);
+        }
+        if (postWithUrl) {
+          if (postWithUrl._id.toString() !== req.params.id) {
+            url = `${url}-${Math.random().toString(36).slice(2)}`;
+          }
+        }
+
+        post.title = title;
+        post.url = url;
+        post.content = content;
+        post.image = image;
+        post.tags = tags;
+        post.published = published;
+        post.featured = featured;
+        post.updatedAt = Date.now();
+        post.save((err) => {
+          if (err) {
+            return next(err);
+          }
+          res.json({ post });
+        });
+      });
+    });
+  },
+];
 
 // Handle post delete on DELETE.
 exports.post_delete_post = (req, res, next) => {
