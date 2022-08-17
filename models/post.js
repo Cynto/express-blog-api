@@ -5,7 +5,7 @@ const PostSchema = new Schema({
   title: {
     type: String,
     required: true,
-    minlength: 35,
+    minlength: 5,
     maxlength: 50,
   },
   url: {
@@ -15,12 +15,12 @@ const PostSchema = new Schema({
   content: {
     type: String,
     required: true,
-    minlength: 80,
-    maxlength: 2500,
+    minlength: 10,
+    maxlength: 10000,
   },
   image: {
     type: String,
-    required: false,
+    required: true,
   },
   tags: {
     type: [String],
