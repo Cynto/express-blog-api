@@ -71,7 +71,7 @@ exports.post_create_post = [
         }
 
         // If featured, set all other posts to featured to false.
-        if (req.body.featured) {
+        if (req.body.featured === 'true') {
           Post.updateMany({ featured: true }, { featured: false }, (err) => {
             if (err) {
               return next(err);
@@ -131,83 +131,96 @@ exports.post_list_get = [
     let sort = req.headers.sort || '-createdAt';
 
     const limit = Number(req.headers.limit) || 12;
-
-    if (sort !== 'comments') {
-      Post.find({})
-        .lean()
-        .populate('user', 'firstName lastName')
-        .populate('comments')
-        .sort(sort)
-        .limit(limit)
-        .exec((err, posts) => {
-          if (err) {
-            console.log(err);
-            return next(err);
-          }
-          res.json(posts);
-        });
+    if (sort === '-createdAt') {
+      sort = {
+        createdAt: -1,
+      };
+    } else if (sort === 'createdAt') {
+      sort = {
+        createdAt: 1,
+      };
     } else {
-      Post.aggregate([
-        {
-          $lookup: {
-            from: 'comments',
-            localField: '_id',
-            foreignField: 'post',
-            as: 'comments',
-          },
-        },
-
-        {
-          $addFields: {
-            commentsCount: { $size: '$comments' },
-          },
-        },
-
-        {
-          $sort: { commentsCount: -1 },
-        },
-        {
-          $limit: limit,
-        },
-        {
-          $lookup: {
-            from: 'users',
-            localField: 'user',
-            foreignField: '_id',
-            as: 'user',
-          },
-        },
-        {
-          $unwind: '$user',
-        },
-        {
-          $project: {
-            _id: 1,
-            title: 1,
-            url: 1,
-            content: 1,
-            image: 1,
-            tags: 1,
-            frontBanner: 1,
-            user: 1,
-            published: 1,
-            featured: 1,
-            comments: 1,
-            commentsCount: 1,
-            user: {
-              _id: 1,
-              firstName: '$user.firstName',
-              lastName: '$user.lastName',
-            },
-          },
-        },
-      ]).exec((err, posts) => {
-        if (err) {
-          return next(err);
-        }
-        res.json(posts);
-      });
+      sort = {
+        commentsCount: -1,
+      };
     }
+    console.log(sort);
+
+    Post.aggregate([
+      {
+        $lookup: {
+          from: 'comments',
+          localField: '_id',
+          foreignField: 'post',
+          as: 'comments',
+        },
+      },
+      {
+        $lookup: {
+          from: 'replies',
+          localField: 'comments._id',
+          foreignField: 'comment',
+          as: 'replies',
+        },
+      },
+      {
+        $addFields: {
+          commentsCount: {
+            $add: [{ $size: '$comments' }, { $size: '$replies' }],
+          },
+        },
+      },
+      {
+        $addFields: {
+          comments: {
+            $setUnion: ['$comments', '$replies'],
+          },
+        },
+      },
+      {
+        $sort: sort,
+      },
+      {
+        $limit: limit,
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'user',
+          foreignField: '_id',
+          as: 'user',
+        },
+      },
+      {
+        $unwind: '$user',
+      },
+      {
+        $project: {
+          _id: 1,
+          title: 1,
+          url: 1,
+          content: 1,
+          image: 1,
+          tags: 1,
+          frontBanner: 1,
+          user: 1,
+          published: 1,
+          featured: 1,
+          comments: 1,
+          commentsCount: 1,
+          user: {
+            _id: 1,
+            firstName: '$user.firstName',
+            lastName: '$user.lastName',
+          },
+        },
+      },
+    ]).exec((err, posts) => {
+      if (err) {
+        return next(err);
+      }
+      res.json(posts);
+    });
   },
 ];
 
