@@ -4,6 +4,8 @@ const Comment = require('../models/comment');
 const { body, validationResult } = require('express-validator');
 const passport = require('passport');
 const debug = require('debug')('postController');
+const fetch = require('node-fetch');
+const FormData = require('form-data');
 
 // Handle post create on POST.
 exports.post_create_post = [
@@ -78,7 +80,48 @@ exports.post_create_post = [
             }
           });
         }
+      });
+      if (!req.body.image.includes('i.imgur.com')) {
+        const imgurFormData = new FormData();
+        imgurFormData.append('image', req.body.image);
 
+        fetch('https://api.imgur.com/3/image', {
+          method: 'POST',
+          headers: {
+            Authorization: `Client-ID ${process.env.IMGUR_CLIENT_ID}`,
+          },
+          body: imgurFormData,
+        })
+          .then((response) => response.json())
+          .then((json) => {
+            console.log(json);
+            if (json.success) {
+              const newPost = new Post({
+                title: req.body.title,
+                url,
+                content: req.body.content,
+                image: json.data.link,
+                tags: req.body.tags,
+                frontBanner: req.body.frontBanner,
+                user: req.user._id,
+                published: req.body.published,
+                featured: req.body.featured,
+              });
+
+              newPost.save((err) => {
+                if (err) {
+                  return next(err);
+                }
+                debug(`New post created: ${newPost.title}`);
+                console.log(newPost);
+                res.json({ post: newPost });
+              });
+            }
+          })
+          .catch((err) => {
+            return next(err);
+          });
+      } else {
         const newPost = new Post({
           title: req.body.title,
           url,
@@ -99,7 +142,7 @@ exports.post_create_post = [
           console.log(newPost);
           res.json({ post: newPost });
         });
-      });
+      }
     }
   },
 ];
@@ -108,20 +151,83 @@ exports.post_create_post = [
 exports.post_published_get = (req, res, next) => {
   // Check sort header for sort order.
   const sort = req.headers.sort || '-createdAt';
-  const limit = Number(req.headers.limit) || 12;
+  const limit = Number(req.headers.limit) || 15;
 
-  Post.find({
-    published: true,
-  })
-    .populate('user', 'firstName lastName')
-    .sort(sort)
-    .limit(limit)
-    .exec((err, posts) => {
-      if (err) {
-        return next(err);
-      }
-      res.json(posts);
-    });
+  Post.aggregate([
+    {
+      $match: {
+        published: true,
+      },
+    },
+    {
+      $lookup: {
+        from: 'comments',
+        localField: '_id',
+        foreignField: 'post',
+        as: 'comments',
+      },
+    },
+    {
+      $lookup: {
+        from: 'replies',
+        localField: 'comments._id',
+        foreignField: 'comment',
+        as: 'replies',
+      },
+    },
+    {
+      $addFields: {
+        comments: {
+          $setUnion: ['$comments', '$replies'],
+        },
+      },
+    },
+
+    {
+      $sort: {
+        createdAt: -1,
+      },
+    },
+    {
+      $limit: limit,
+    },
+    {
+      $lookup: {
+        from: 'users',
+        localField: 'user',
+        foreignField: '_id',
+        as: 'user',
+      },
+    },
+    {
+      $unwind: '$user',
+    },
+    {
+      $project: {
+        _id: 1,
+        title: 1,
+        url: 1,
+        content: 1,
+        image: 1,
+        tags: 1,
+        frontBanner: 1,
+        user: 1,
+        published: 1,
+        featured: 1,
+        comments: 1,
+        user: {
+          _id: 1,
+          firstName: '$user.firstName',
+          lastName: '$user.lastName',
+        },
+      },
+    },
+  ]).exec((err, posts) => {
+    if (err) {
+      return next(err);
+    }
+    res.json(posts);
+  });
 };
 
 // Display list of all posts.
@@ -144,7 +250,6 @@ exports.post_list_get = [
         commentsCount: -1,
       };
     }
-    console.log(sort);
 
     Post.aggregate([
       {
@@ -314,7 +419,58 @@ exports.post_update_put = [
             url = `${url}-${Math.random().toString(36).slice(2)}`;
           }
         }
+      });
+      if (!post.image.includes('imgur')) {
+        const imgurFormData = new FormData();
 
+        imgurFormData.append('image', req.body.image);
+
+        fetch('https://api.imgur.com/3/image', {
+          method: 'POST',
+          headers: {
+            Authorization: `Client-ID ${process.env.IMGUR_CLIENT_ID}`,
+          },
+          body: imgurFormData,
+        })
+          .then((response) => response.json())
+          .then((json) => {
+            console.log(json);
+            if (json.success) {
+              post.title = title;
+              post.url = url;
+              post.content = content;
+              post.image = json.data.link;
+              post.tags = tags;
+              post.published = published;
+              post.featured = featured;
+              post.updatedAt = Date.now();
+              post.save((err) => {
+                if (err) {
+                  return next(err);
+                }
+                res.json({ post });
+              });
+            } else {
+              post.title = title;
+              post.url = url;
+              post.content = content;
+              post.image = image;
+              post.tags = tags;
+              post.published = published;
+              post.featured = featured;
+              post.updatedAt = Date.now();
+              post.save((err) => {
+                if (err) {
+                  return next(err);
+                }
+                res.json({ post });
+              });
+            }
+          })
+          .catch((err) => {
+            return next(err);
+          });
+      } else {
         post.title = title;
         post.url = url;
         post.content = content;
@@ -329,7 +485,7 @@ exports.post_update_put = [
           }
           res.json({ post });
         });
-      });
+      }
     });
   },
 ];
