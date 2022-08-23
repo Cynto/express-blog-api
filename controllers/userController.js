@@ -14,7 +14,7 @@ exports.user_get = (req, res, next) => {
       return next(err);
     }
     if (!user) {
-      return res.json(null);
+      return res.json({ user: null });
     }
     const userObj = {
       _id: user._id,
@@ -23,7 +23,7 @@ exports.user_get = (req, res, next) => {
       loggedIn: true,
       isAdmin: user.isAdmin,
     };
-    return res.json(userObj);
+    return res.json({ user: userObj });
   })(req, res, next);
 };
 
@@ -59,6 +59,16 @@ exports.user_create_post = [
       return true;
     })
     .trim()
+    .escape(),
+  body('adminCode', 'Admin code must be correct.')
+    .custom((value, { req }) => {
+      if (value !== process.env.ADMIN_CODE) {
+        throw new Error('Admin code is incorrect.');
+      }
+      return true;
+    })
+    .trim()
+    .optional()
     .escape(),
   // Process request after validation and sanitization.
   (req, res, next) => {
@@ -96,13 +106,14 @@ exports.user_create_post = [
             if (err) {
               return next(err);
             }
+            console.log(req.body.adminCode);
             // Create new user object.
             const user = new User({
               firstName: req.body.firstName,
               lastName: req.body.lastName,
               email: req.body.email,
               password: hash,
-              isAdmin: false,
+              isAdmin: req.body.adminCode ? true : false,
             });
             // Save user to database.
 
