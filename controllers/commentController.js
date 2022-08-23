@@ -114,7 +114,7 @@ exports.comment_delete_delete = [
           });
         });
 
-        debug(`Comment deleted: ${comment}`);
+        debug(`Comment deleted: ${comment.title}`);
         res.status(204).send();
       });
     });
