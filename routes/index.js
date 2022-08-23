@@ -28,6 +28,9 @@ router.post('/posts', postController.post_create_post);
 // GET request for list of all posts.
 router.get('/posts', postController.post_list_get);
 
+// GET request for list of published posts.
+router.get('/posts/published', postController.post_published_get);
+
 // GET request for one post.
 router.get('/posts/:url', postController.post_detail_get);
 
