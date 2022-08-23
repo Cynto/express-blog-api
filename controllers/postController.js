@@ -492,5 +492,30 @@ exports.post_update_put = [
 
 // Handle post delete on DELETE.
 exports.post_delete_post = (req, res, next) => {
-  res.send('NOT IMPLEMENTED: Post delete DELETE');
+  passport.authenticate('jwt', { session: false }, (err, user, info) => {
+    if (err) {
+      return next(err);
+    }
+    if (!user) {
+      return res.status(401);
+    }
+    if (!user.isAdmin) {
+      return res.status(403);
+    }
+    Post.findByIdAndDelete(req.params.id, (err, post) => {
+      if (err) {
+        return next(err);
+      }
+      if (!post) {
+        return res.status(404).send({
+          message: 'Post not found.',
+        });
+      } else {
+        debug(`Comment deleted: ${post.title}`);
+        return res.status(204).send({
+          message: 'Post deleted'
+        });
+      }
+    });
+  })(req, res, next);
 };
