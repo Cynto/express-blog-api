@@ -17,8 +17,7 @@ exports.post_create_post = [
     .withMessage('Title must include at least 5 characters.')
     .isLength({ max: 50 })
     .withMessage('Title must not include over 50 characters.')
-    .trim()
-    .escape(),
+    .trim(),
   body('content')
     .isLength({ min: 5 })
     .withMessage('Content must include at least 5 characters.')
@@ -357,8 +356,8 @@ exports.post_update_put = [
     .withMessage('Title must include at least 5 characters.')
     .isLength({ max: 50 })
     .withMessage('Title must not include over 50 characters.')
-    .trim()
-    .escape(),
+    .trim(),
+
   body('content')
     .isLength({ min: 5 })
     .withMessage('Content must include at least 5 characters.')
@@ -513,7 +512,7 @@ exports.post_delete_post = (req, res, next) => {
       } else {
         debug(`Comment deleted: ${post.title}`);
         return res.status(204).send({
-          message: 'Post deleted'
+          message: 'Post deleted',
         });
       }
     });
