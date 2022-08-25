@@ -6,7 +6,7 @@ const PostSchema = new Schema({
     type: String,
     required: true,
     minlength: 5,
-    maxlength: 50,
+    maxlength: 75,
   },
   url: {
     type: String,

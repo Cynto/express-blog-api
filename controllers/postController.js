@@ -15,8 +15,8 @@ exports.post_create_post = [
   body('title')
     .isLength({ min: 5 })
     .withMessage('Title must include at least 5 characters.')
-    .isLength({ max: 50 })
-    .withMessage('Title must not include over 50 characters.')
+    .isLength({ max: 75 })
+    .withMessage('Title must not include over 75 characters.')
     .trim(),
   body('content')
     .isLength({ min: 5 })
@@ -354,8 +354,8 @@ exports.post_update_put = [
   body('title')
     .isLength({ min: 5 })
     .withMessage('Title must include at least 5 characters.')
-    .isLength({ max: 50 })
-    .withMessage('Title must not include over 50 characters.')
+    .isLength({ max: 75 })
+    .withMessage('Title must not include over 75 characters.')
     .trim(),
 
   body('content')
