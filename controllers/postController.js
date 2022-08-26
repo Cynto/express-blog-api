@@ -62,6 +62,7 @@ exports.post_create_post = [
     } else {
       let url = req.body.title.toLowerCase();
       url = url.replaceAll(' ', '-');
+      url = url.replaceAll('?', '');
       // check if url already exists
       Post.findOne({ url: url }, (err, post) => {
         if (err) {
@@ -408,6 +409,7 @@ exports.post_update_put = [
           .send('You are not authorized to edit this post.');
       }
       let url = title.toLowerCase().replace(/ /g, '-');
+      url = url.replaceAll('?', '');
       // Check if url is already taken.
       Post.findOne({ url: url }, (err, postWithUrl) => {
         if (err) {
