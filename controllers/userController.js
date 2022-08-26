@@ -68,7 +68,9 @@ exports.user_create_post = [
       return true;
     })
     .trim()
-    .optional()
+    .optional({
+      nullable: true
+    })
     .escape(),
   // Process request after validation and sanitization.
   (req, res, next) => {
