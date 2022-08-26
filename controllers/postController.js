@@ -150,8 +150,22 @@ exports.post_create_post = [
 // Display list of published posts.
 exports.post_published_get = (req, res, next) => {
   // Check sort header for sort order.
-  const sort = req.headers.sort || '-createdAt';
+  let sort = req.headers.sort || '-createdAt';
   const limit = Number(req.headers.limit) || 15;
+
+  if (sort === '-createdAt') {
+    sort = {
+      createdAt: -1,
+    };
+  } else if (sort === 'createdAt') {
+    sort = {
+      createdAt: 1,
+    };
+  } else {
+    sort = {
+      commentsCount: -1,
+    };
+  }
 
   Post.aggregate([
     {
@@ -184,9 +198,7 @@ exports.post_published_get = (req, res, next) => {
     },
 
     {
-      $sort: {
-        createdAt: -1,
-      },
+      $sort: sort,
     },
     {
       $limit: limit,
