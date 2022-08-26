@@ -14,8 +14,7 @@ exports.comment_create_post = [
     .withMessage('Comment must include at least 5 characters.')
     .isLength({ max: 240 })
     .withMessage('Comment must not include over 240 characters.')
-    .trim()
-    .escape(),
+    .trim(),
   // Process request after validation and sanitization.
   (req, res, next) => {
     // Extract the validation errors from a request.

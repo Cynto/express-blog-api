@@ -16,8 +16,7 @@ exports.reply_create_post = [
     .withMessage('Reply must include at least 5 characters.')
     .isLength({ max: 240 })
     .withMessage('Reply must not include over 240 characters.')
-    .trim()
-    .escape(),
+    .trim(),
 
   // Process request after validation and sanitization.
   (req, res, next) => {
