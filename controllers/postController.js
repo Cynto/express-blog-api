@@ -353,6 +353,14 @@ exports.post_detail_get = (req, res, next) => {
   Post.findOne({ url: req.params.url })
     .lean()
     .populate('user', 'firstName lastName')
+    .populate({
+      path: 'comments',
+      populate: {
+        path: 'user',
+        select: 'firstName lastName',
+        model: Comment,
+      },
+    })
 
     .exec((err, post) => {
       if (err) {
@@ -363,7 +371,7 @@ exports.post_detail_get = (req, res, next) => {
           message: 'Post not found.',
         });
       }
-      
+
       res.json({ post });
     });
 };
