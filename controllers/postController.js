@@ -191,6 +191,13 @@ exports.post_published_get = (req, res, next) => {
     },
     {
       $addFields: {
+        commentsCount: {
+          $add: [{ $size: '$comments' }, { $size: '$replies' }],
+        },
+      },
+    },
+    {
+      $addFields: {
         comments: {
           $setUnion: ['$comments', '$replies'],
         },
@@ -356,6 +363,7 @@ exports.post_detail_get = (req, res, next) => {
           message: 'Post not found.',
         });
       }
+      
       res.json({ post });
     });
 };
