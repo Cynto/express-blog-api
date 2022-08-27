@@ -191,6 +191,13 @@ exports.post_published_get = (req, res, next) => {
     },
     {
       $addFields: {
+        commentsCount: {
+          $add: [{ $size: '$comments' }, { $size: '$replies' }],
+        },
+      },
+    },
+    {
+      $addFields: {
         comments: {
           $setUnion: ['$comments', '$replies'],
         },
