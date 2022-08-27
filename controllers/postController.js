@@ -363,6 +363,20 @@ exports.post_detail_get = (req, res, next) => {
           message: 'Post not found.',
         });
       }
+      post.comments = post.comments.map((commentID) => {
+        Comment.findById(commentID)
+          .lean()
+          .populate('user', 'firstName lastName')
+          .exec((err, comment) => {
+            if (err) {
+              return next(err);
+            }
+            if (!comment) {
+              return commentID;
+            }
+            return comment;
+          });
+      });
       res.json({ post });
     });
 };
