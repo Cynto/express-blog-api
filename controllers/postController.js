@@ -49,100 +49,104 @@ exports.post_create_post = [
     .trim(),
   // Process request after validation and sanitization.
   (req, res, next) => {
-    // Extract the validation errors from a request.
-    const errors = validationResult(req);
-    console.log(req.body);
+    if (req.isAdmin) {
+      // Extract the validation errors from a request.
+      const errors = validationResult(req);
+      console.log(req.body);
 
-    // If there are no errors, save user to database.
-    if (!errors.isEmpty()) {
-      // There are errors. Render form again with sanitized values/error messages.
-      res.status(401).send({
-        errors: errors.array(),
-      });
-    } else {
-      let url = req.body.title.toLowerCase();
-      url = url.replaceAll(' ', '-');
-      url = url.replaceAll('?', '');
-      // check if url already exists
-      Post.findOne({ url: url }, (err, post) => {
-        if (err) {
-          return next(err);
-        }
-        if (post) {
-          url = `${url}-${Math.random().toString(36).slice(2)}`;
-        }
-
-        // If featured, set all other posts to featured to false.
-        if (req.body.featured === 'true') {
-          Post.updateMany({ featured: true }, { featured: false }, (err) => {
-            if (err) {
-              return next(err);
-            }
-          });
-        }
-      });
-      if (!req.body.image.includes('i.imgur.com')) {
-        const imgurFormData = new FormData();
-        imgurFormData.append('image', req.body.image);
-
-        fetch('https://api.imgur.com/3/image', {
-          method: 'POST',
-          headers: {
-            Authorization: `Client-ID ${process.env.IMGUR_CLIENT_ID}`,
-          },
-          body: imgurFormData,
-        })
-          .then((response) => response.json())
-          .then((json) => {
-            console.log(json);
-            if (json.success) {
-              const newPost = new Post({
-                title: req.body.title,
-                url,
-                content: req.body.content,
-                image: json.data.link,
-                tags: req.body.tags,
-                frontBanner: req.body.frontBanner,
-                user: req.user._id,
-                published: req.body.published,
-                featured: req.body.featured,
-              });
-
-              newPost.save((err) => {
-                if (err) {
-                  return next(err);
-                }
-                debug(`New post created: ${newPost.title}`);
-                console.log(newPost);
-                res.json({ post: newPost });
-              });
-            }
-          })
-          .catch((err) => {
-            return next(err);
-          });
-      } else {
-        const newPost = new Post({
-          title: req.body.title,
-          url,
-          content: req.body.content,
-          image: req.body.image,
-          tags: req.body.tags,
-          frontBanner: req.body.frontBanner,
-          user: req.user._id,
-          published: req.body.published,
-          featured: req.body.featured,
+      // If there are no errors, save user to database.
+      if (!errors.isEmpty()) {
+        // There are errors. Render form again with sanitized values/error messages.
+        res.status(401).send({
+          errors: errors.array(),
         });
-
-        newPost.save((err) => {
+      } else {
+        let url = req.body.title.toLowerCase();
+        url = url.replaceAll(' ', '-');
+        url = url.replaceAll('?', '');
+        // check if url already exists
+        Post.findOne({ url: url }, (err, post) => {
           if (err) {
             return next(err);
           }
-          debug(`New post created: ${newPost.title}`);
-          console.log(newPost);
-          res.json({ post: newPost });
+          if (post) {
+            url = `${url}-${Math.random().toString(36).slice(2)}`;
+          }
+
+          // If featured, set all other posts to featured to false.
+          if (req.body.featured === 'true') {
+            Post.updateMany({ featured: true }, { featured: false }, (err) => {
+              if (err) {
+                return next(err);
+              }
+            });
+          }
         });
+        if (!req.body.image.includes('i.imgur.com')) {
+          const imgurFormData = new FormData();
+          imgurFormData.append('image', req.body.image);
+
+          fetch('https://api.imgur.com/3/image', {
+            method: 'POST',
+            headers: {
+              Authorization: `Client-ID ${process.env.IMGUR_CLIENT_ID}`,
+            },
+            body: imgurFormData,
+          })
+            .then((response) => response.json())
+            .then((json) => {
+              console.log(json);
+              if (json.success) {
+                const newPost = new Post({
+                  title: req.body.title,
+                  url,
+                  content: req.body.content,
+                  image: json.data.link,
+                  tags: req.body.tags,
+                  frontBanner: req.body.frontBanner,
+                  user: req.user._id,
+                  published: req.body.published,
+                  featured: req.body.featured,
+                });
+
+                newPost.save((err) => {
+                  if (err) {
+                    return next(err);
+                  }
+                  debug(`New post created: ${newPost.title}`);
+                  console.log(newPost);
+                  res.json({ post: newPost });
+                });
+              }
+            })
+            .catch((err) => {
+              return next(err);
+            });
+        } else {
+          const newPost = new Post({
+            title: req.body.title,
+            url,
+            content: req.body.content,
+            image: req.body.image,
+            tags: req.body.tags,
+            frontBanner: req.body.frontBanner,
+            user: req.user._id,
+            published: req.body.published,
+            featured: req.body.featured,
+          });
+
+          newPost.save((err) => {
+            if (err) {
+              return next(err);
+            }
+            debug(`New post created: ${newPost.title}`);
+            console.log(newPost);
+            res.json({ post: newPost });
+          });
+        }
       }
+    } else {
+      res.status(401).send('You are not authorized to create a post.');
     }
   },
 ];
@@ -372,7 +376,14 @@ exports.post_detail_get = (req, res, next) => {
         });
       }
 
-      res.json({ post });
+      if (!post.published) {
+        return res.status(403).json({
+          post: post,
+          authorized: false,
+        });
+      } else {
+        res.json({ post });
+      }
     });
 };
 
@@ -418,104 +429,108 @@ exports.post_update_put = [
     .trim(),
 
   (req, res, next) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(422).json({ errors: errors.array() });
-    }
-    const { title, content, image, tags, published, featured } = req.body;
-    Post.findById(req.params.id, (err, post) => {
-      if (err) {
-        return next(err);
+    if (req.user.isAdmin) {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(422).json({ errors: errors.array() });
       }
-      if (!post) {
-        return res.status(404).send('Post not found.');
-      }
-      if (post.user.toString() !== req.user._id.toString()) {
-        console.log('hi');
-        return res
-          .status(401)
-          .send('You are not authorized to edit this post.');
-      }
-      let url = title.toLowerCase().replace(/ /g, '-');
-      url = url.replaceAll('?', '');
-      // Check if url is already taken.
-      Post.findOne({ url: url }, (err, postWithUrl) => {
+      const { title, content, image, tags, published, featured } = req.body;
+      Post.findById(req.params.id, (err, post) => {
         if (err) {
           return next(err);
         }
-        if (postWithUrl) {
-          if (postWithUrl._id.toString() !== req.params.id) {
-            url = `${url}-${Math.random().toString(36).slice(2)}`;
-          }
+        if (!post) {
+          return res.status(404).send('Post not found.');
         }
-      });
-      if (!post.image.includes('imgur')) {
-        const imgurFormData = new FormData();
-
-        imgurFormData.append('image', req.body.image);
-
-        fetch('https://api.imgur.com/3/image', {
-          method: 'POST',
-          headers: {
-            Authorization: `Client-ID ${process.env.IMGUR_CLIENT_ID}`,
-          },
-          body: imgurFormData,
-        })
-          .then((response) => response.json())
-          .then((json) => {
-            console.log(json);
-            if (json.success) {
-              post.title = title;
-              post.url = url;
-              post.content = content;
-              post.image = json.data.link;
-              post.tags = tags;
-              post.published = published;
-              post.featured = featured;
-              post.updatedAt = Date.now();
-              post.save((err) => {
-                if (err) {
-                  return next(err);
-                }
-                res.json({ post });
-              });
-            } else {
-              post.title = title;
-              post.url = url;
-              post.content = content;
-              post.image = image;
-              post.tags = tags;
-              post.published = published;
-              post.featured = featured;
-              post.updatedAt = Date.now();
-              post.save((err) => {
-                if (err) {
-                  return next(err);
-                }
-                res.json({ post });
-              });
-            }
-          })
-          .catch((err) => {
-            return next(err);
-          });
-      } else {
-        post.title = title;
-        post.url = url;
-        post.content = content;
-        post.image = image;
-        post.tags = tags;
-        post.published = published;
-        post.featured = featured;
-        post.updatedAt = Date.now();
-        post.save((err) => {
+        if (post.user.toString() !== req.user._id.toString()) {
+          console.log('hi');
+          return res
+            .status(401)
+            .send('You are not authorized to edit this post.');
+        }
+        let url = title.toLowerCase().replace(/ /g, '-');
+        url = url.replaceAll('?', '');
+        // Check if url is already taken.
+        Post.findOne({ url: url }, (err, postWithUrl) => {
           if (err) {
             return next(err);
           }
-          res.json({ post });
+          if (postWithUrl) {
+            if (postWithUrl._id.toString() !== req.params.id) {
+              url = `${url}-${Math.random().toString(36).slice(2)}`;
+            }
+          }
         });
-      }
-    });
+        if (!post.image.includes('imgur')) {
+          const imgurFormData = new FormData();
+
+          imgurFormData.append('image', req.body.image);
+
+          fetch('https://api.imgur.com/3/image', {
+            method: 'POST',
+            headers: {
+              Authorization: `Client-ID ${process.env.IMGUR_CLIENT_ID}`,
+            },
+            body: imgurFormData,
+          })
+            .then((response) => response.json())
+            .then((json) => {
+              console.log(json);
+              if (json.success) {
+                post.title = title;
+                post.url = url;
+                post.content = content;
+                post.image = json.data.link;
+                post.tags = tags;
+                post.published = published;
+                post.featured = featured;
+                post.updatedAt = Date.now();
+                post.save((err) => {
+                  if (err) {
+                    return next(err);
+                  }
+                  res.json({ post });
+                });
+              } else {
+                post.title = title;
+                post.url = url;
+                post.content = content;
+                post.image = image;
+                post.tags = tags;
+                post.published = published;
+                post.featured = featured;
+                post.updatedAt = Date.now();
+                post.save((err) => {
+                  if (err) {
+                    return next(err);
+                  }
+                  res.json({ post });
+                });
+              }
+            })
+            .catch((err) => {
+              return next(err);
+            });
+        } else {
+          post.title = title;
+          post.url = url;
+          post.content = content;
+          post.image = image;
+          post.tags = tags;
+          post.published = published;
+          post.featured = featured;
+          post.updatedAt = Date.now();
+          post.save((err) => {
+            if (err) {
+              return next(err);
+            }
+            res.json({ post });
+          });
+        }
+      });
+    } else {
+      return res.status(401).send('You are not authorized to edit this post.');
+    }
   },
 ];
 
