@@ -49,7 +49,8 @@ exports.post_create_post = [
     .trim(),
   // Process request after validation and sanitization.
   (req, res, next) => {
-    if (req.isAdmin) {
+    if (req.user.isAdmin) {
+      
       // Extract the validation errors from a request.
       const errors = validationResult(req);
       console.log(req.body);
