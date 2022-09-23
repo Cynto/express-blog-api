@@ -114,7 +114,9 @@ exports.comment_delete_delete = [
         });
 
         debug(`Comment deleted: ${comment.title}`);
-        res.status(204).send();
+        res.status(204).json({
+          status: 204,
+        })
       });
     });
   },

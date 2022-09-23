@@ -115,7 +115,7 @@ exports.reply_delete_delete = [
 
         debug(`Reply deleted: ${reply}`);
         res.status(204).json({
-          deleted: true,
+          status: 204,
         });
       });
     });
