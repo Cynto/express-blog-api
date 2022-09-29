@@ -50,7 +50,6 @@ exports.post_create_post = [
   // Process request after validation and sanitization.
   (req, res, next) => {
     if (req.user.isAdmin) {
-      
       // Extract the validation errors from a request.
       const errors = validationResult(req);
       console.log(req.body);
@@ -552,13 +551,15 @@ exports.post_delete_post = (req, res, next) => {
         return next(err);
       }
       if (!post) {
-        return res.status(404).send({
+        return res.status(404).json({
+          status: 404,
           message: 'Post not found.',
         });
       } else {
         debug(`Comment deleted: ${post.title}`);
-        return res.status(204).send({
-          message: 'Post deleted',
+        return res.status(204).json({
+          status: 204,
+          message: 'Post deleted.',
         });
       }
     });
