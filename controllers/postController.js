@@ -146,7 +146,7 @@ exports.post_create_post = [
         }
       }
     } else {
-      res.status(401).send('You are not authorized to create a post.');
+      res.send('You are not authorized to create a post.').status(401);
     }
   },
 ];
@@ -371,16 +371,20 @@ exports.post_detail_get = (req, res, next) => {
         return next(err);
       }
       if (!post) {
-        return res.status(404).json({
-          message: 'Post not found.',
-        });
+        return res
+          .json({
+            message: 'Post not found.',
+          })
+          .status(404);
       }
 
       if (!post.published) {
-        return res.status(403).json({
-          post: post,
-          authorized: false,
-        });
+        return res
+          .json({
+            post: post,
+            authorized: false,
+          })
+          .status(403);
       } else {
         res.json({ post });
       }
@@ -432,7 +436,7 @@ exports.post_update_put = [
     if (req.user.isAdmin) {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
-        return res.status(422).json({ errors: errors.array() });
+        return res.json({ errors: errors.array() }).status(422);
       }
       const { title, content, image, tags, published, featured } = req.body;
       Post.findById(req.params.id, (err, post) => {
@@ -445,8 +449,9 @@ exports.post_update_put = [
         if (post.user.toString() !== req.user._id.toString()) {
           console.log('hi');
           return res
-            .status(401)
-            .send('You are not authorized to edit this post.');
+
+            .send('You are not authorized to edit this post.')
+            .status(401);
         }
         let url = title.toLowerCase().replace(/ /g, '-');
         url = url.replaceAll('?', '');
@@ -551,16 +556,20 @@ exports.post_delete_post = (req, res, next) => {
         return next(err);
       }
       if (!post) {
-        return res.status(404).json({
-          status: 404,
-          message: 'Post not found.',
-        });
+        return res
+          .json({
+            status: 404,
+            message: 'Post not found.',
+          })
+          .status(404);
       } else {
         debug(`Comment deleted: ${post.title}`);
-        return res.status(204).json({
-          status: 204,
-          message: 'Post deleted.',
-        });
+        return res
+          .json({
+            status: 204,
+            message: 'Post deleted.',
+          })
+          .status(204);
       }
     });
   })(req, res, next);

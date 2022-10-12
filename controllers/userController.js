@@ -69,7 +69,7 @@ exports.user_create_post = [
     })
     .trim()
     .optional({
-      nullable: true
+      nullable: true,
     })
     .escape(),
   // Process request after validation and sanitization.
@@ -92,16 +92,18 @@ exports.user_create_post = [
         }
         if (user) {
           // User exists, redirect to login page.
-          res.status(401).json({
-            errors: [
-              {
-                msg: 'User with that email already exists.',
-                value: req.body.email,
-                param: 'email',
-                location: 'body',
-              },
-            ],
-          });
+          res
+            .json({
+              errors: [
+                {
+                  msg: 'User with that email already exists.',
+                  value: req.body.email,
+                  param: 'email',
+                  location: 'body',
+                },
+              ],
+            })
+            .status(401);
         } else {
           // Hash password.
           bcrypt.hash(req.body.password, 10, (err, hash) => {
@@ -148,16 +150,18 @@ exports.user_login_post = (req, res, next) => {
       return next(err);
     }
     if (!user) {
-      return res.status(401).json({
-        errors: [
-          {
-            msg: 'Invalid email or password.',
-            param: 'email',
-            value: '',
-            location: 'body',
-          },
-        ],
-      });
+      return res
+        .json({
+          errors: [
+            {
+              msg: 'Invalid email or password.',
+              param: 'email',
+              value: '',
+              location: 'body',
+            },
+          ],
+        })
+        .status(401);
     }
     req.login(user, { session: false }, (err) => {
       if (err) {

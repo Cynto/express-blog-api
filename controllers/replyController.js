@@ -52,9 +52,11 @@ exports.reply_create_post = [
             debug(`Reply added to comment: ${comment}`);
           });
         });
-        res.status(201).json({
-          reply: reply,
-        });
+        res
+          .json({
+            reply: reply,
+          })
+          .status(201);
       });
     }
   },
@@ -72,7 +74,7 @@ exports.reply_list_get = (req, res, next) => {
       if (err) {
         return next(err);
       }
-      console.log(replies);
+
       res.json({ replies });
     });
 };
@@ -114,9 +116,11 @@ exports.reply_delete_delete = [
         });
 
         debug(`Reply deleted: ${reply}`);
-        res.status(204).json({
-          status: 204,
-        });
+        return res
+          .json({
+            status: 204,
+          })
+          .status(204);
       });
     });
   },

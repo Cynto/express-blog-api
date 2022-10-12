@@ -35,7 +35,7 @@ exports.comment_create_post = [
         if (err) {
           return next(err);
         }
-        debug(`Comment created: ${comment}`);
+        debug(`Comment created: ${comment._id}`);
         // Update post's comment array.
         Post.findById(req.body.post, (err, post) => {
           if (err) {
@@ -46,12 +46,14 @@ exports.comment_create_post = [
             if (err) {
               return next(err);
             }
-            debug(`Comment added to post: ${post}`);
+            debug(`Comment added to post: ${post.title}`);
           });
         });
-        res.status(201).json({
-          comment: comment,
-        });
+        res
+          .json({
+            comment: comment,
+          })
+          .status(201);
       });
     }
   },
@@ -109,14 +111,16 @@ exports.comment_delete_delete = [
             if (err) {
               return next(err);
             }
-            debug(`Comment removed from post: ${post}`);
+            debug(`Comment removed from post: ${post.title}`);
           });
         });
 
         debug(`Comment deleted: ${comment.title}`);
-        res.status(204).json({
-          status: 204,
-        })
+        return res
+          .json({
+            status: 204,
+          })
+          .status(204);
       });
     });
   },
