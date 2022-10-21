@@ -11,7 +11,7 @@ You can find a website that uses this API as its backend [here](https://bloggy.v
 -   Create, read, update, and delete posts
 -   Create, read, and delete comments
 -   Create, Read, and delete replies to comments
--   Create, and delete users
+-   Create user accounts
 
 ## Installation
 
@@ -42,6 +42,10 @@ You can find a website that uses this API as its backend [here](https://bloggy.v
 -   [DotEnv](https://www.npmjs.com/package/dotenv)
 ### Dev Dependencies
 -   [Nodemon](https://www.npmjs.com/package/nodemon)
+-   [Supertest](https://www.npmjs.com/package/supertest)
+-   [Superagent](https://www.npmjs.com/package/superagent)
+-   [Jest](https://jestjs.io/)
+-   [MongoDB-Memory-Server](https://www.npmjs.com/package/mongodb-memory-server)
 
 
 
