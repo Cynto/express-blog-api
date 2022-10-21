@@ -17,9 +17,6 @@ router.post('/users', userController.user_create_post);
 // POST request to login.
 router.post('/users/login', userController.user_login_post);
 
-// GET request to logout.
-router.get('/users/logout', userController.user_logout_get);
-
 /// POST ROUTES ///
 
 // POST request for creating Post.
