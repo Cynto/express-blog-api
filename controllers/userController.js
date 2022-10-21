@@ -14,13 +14,14 @@ exports.user_get = (req, res, next) => {
       return next(err);
     }
     if (!user) {
-      return res.json({ user: null });
+      return res.status(401).json({
+        userObj: null,
+      });
     }
     const userObj = {
       _id: user._id,
       firstName: user.firstName,
       lastName: user.lastName,
-      loggedIn: true,
       isAdmin: user.isAdmin,
     };
     return res.json({ user: userObj });
@@ -47,7 +48,7 @@ exports.user_create_post = [
   body('email', 'Email must be a valid email address.')
     .isEmail()
     .normalizeEmail(),
-  body('password', 'Password must be at least 8 characters.')
+  body('password', 'Password must include at least 8 characters.')
     .isLength({ min: 8 })
     .trim()
     .escape(),
@@ -76,15 +77,14 @@ exports.user_create_post = [
   (req, res, next) => {
     // Extract the validation errors from a request.
     const errors = validationResult(req);
-    console.log(req.body);
 
     // If there are no errors, save user to database.
     if (!errors.isEmpty()) {
       // There are errors. Render form again with sanitized values/error messages.
+      
       res.status(401).send({
         errors: errors.array(),
       });
-      console.log(errors.array());
     } else {
       User.findOne({ email: req.body.email }, (err, user) => {
         if (err) {
@@ -92,25 +92,22 @@ exports.user_create_post = [
         }
         if (user) {
           // User exists, redirect to login page.
-          res
-            .json({
-              errors: [
-                {
-                  msg: 'User with that email already exists.',
-                  value: req.body.email,
-                  param: 'email',
-                  location: 'body',
-                },
-              ],
-            })
-            .status(401);
+          res.status(401).json({
+            errors: [
+              {
+                msg: 'Email is already in use.',
+                value: req.body.email,
+                param: 'email',
+                location: 'body',
+              },
+            ],
+          });
         } else {
           // Hash password.
           bcrypt.hash(req.body.password, 10, (err, hash) => {
             if (err) {
               return next(err);
             }
-            console.log(req.body.adminCode);
             // Create new user object.
             const user = new User({
               firstName: req.body.firstName,
@@ -123,7 +120,7 @@ exports.user_create_post = [
 
             user.save((err) => {
               if (err) {
-                debug(err);
+                
                 return next(err);
               }
               // Successful - redirect to new user record.
@@ -133,6 +130,7 @@ exports.user_create_post = [
                   _id: user._id,
                   firstName: user.firstName,
                   lastName: user.lastName,
+                  isAdmin: user.isAdmin,
                 },
               });
             });
@@ -150,18 +148,16 @@ exports.user_login_post = (req, res, next) => {
       return next(err);
     }
     if (!user) {
-      return res
-        .json({
-          errors: [
-            {
-              msg: 'Invalid email or password.',
-              param: 'email',
-              value: '',
-              location: 'body',
-            },
-          ],
-        })
-        .status(401);
+      return res.status(401).json({
+        errors: [
+          {
+            msg: 'Invalid email or password.',
+            param: 'email',
+            value: '',
+            location: 'body',
+          },
+        ],
+      });
     }
     req.login(user, { session: false }, (err) => {
       if (err) {
@@ -171,15 +167,16 @@ exports.user_login_post = (req, res, next) => {
       // Generate JWT.
       const token = jwt.sign(user.toJSON(), process.env.JWT_SECRET);
       return res.json({
-        user,
+        user: {
+          _id: user._id,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          isAdmin: user.isAdmin,
+        },
         token,
       });
     });
   })(req, res, next);
 };
 
-// Display user logout on GET.
-exports.user_logout_get = (req, res, next) => {
-  req.logout();
-  res.redirect('/');
-};
+
