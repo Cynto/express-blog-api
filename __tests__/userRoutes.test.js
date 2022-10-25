@@ -288,7 +288,7 @@ describe('user routes', () => {
       expect(next).toHaveBeenCalledWith(err);
     });
 
-    it('should return 200 and user object if user is logged in', async () => {
+    it('should return 200, user object and token if login attempt is successful', async () => {
       const res = await request(app).post('/users/login').send({
         email: userObj.email,
         password: userObj.password,
@@ -301,6 +301,7 @@ describe('user routes', () => {
         lastName: userObj.lastName,
         isAdmin: false,
       });
+      expect(res.body.token).toEqual(expect.any(String));
     });
   });
 });
