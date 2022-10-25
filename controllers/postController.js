@@ -1,5 +1,5 @@
-const User = require('../models/user');
 const Post = require('../models/post');
+const User = require('../models/user');
 const Comment = require('../models/comment');
 const { body, validationResult } = require('express-validator');
 const passport = require('passport');
@@ -48,16 +48,15 @@ exports.post_create_post = [
     .withMessage('Featured must be a boolean.')
     .trim(),
   // Process request after validation and sanitization.
-  (req, res, next) => {
+  async (req, res, next) => {
     if (req.user.isAdmin) {
       // Extract the validation errors from a request.
       const errors = validationResult(req);
-      console.log(req.body);
 
       // If there are no errors, save user to database.
       if (!errors.isEmpty()) {
         // There are errors. Render form again with sanitized values/error messages.
-        res.status(401).send({
+        res.status(400).send({
           errors: errors.array(),
         });
       } else {
@@ -65,63 +64,61 @@ exports.post_create_post = [
         url = url.replaceAll(' ', '-');
         url = url.replaceAll('?', '');
         // check if url already exists
-        Post.findOne({ url: url }, (err, post) => {
-          if (err) {
-            return next(err);
-          }
+
+        try {
+          const post = await Post.findOne({ url: url });
           if (post) {
             url = `${url}-${Math.random().toString(36).slice(2)}`;
           }
+        } catch (err) {
+          return next(err);
+        }
 
-          // If featured, set all other posts to featured to false.
-          if (req.body.featured === 'true') {
-            Post.updateMany({ featured: true }, { featured: false }, (err) => {
-              if (err) {
-                return next(err);
-              }
-            });
+        // If featured, set all other posts to featured to false.
+        if (req.body.featured === 'true') {
+          try {
+            Post.updateMany({ featured: true }, { featured: false });
+          } catch (error) {
+            return next(error);
           }
-        });
+        }
         if (!req.body.image.includes('i.imgur.com')) {
           const imgurFormData = new FormData();
           imgurFormData.append('image', req.body.image);
 
-          fetch('https://api.imgur.com/3/image', {
-            method: 'POST',
-            headers: {
-              Authorization: `Client-ID ${process.env.IMGUR_CLIENT_ID}`,
-            },
-            body: imgurFormData,
-          })
-            .then((response) => response.json())
-            .then((json) => {
-              console.log(json);
-              if (json.success) {
-                const newPost = new Post({
-                  title: req.body.title,
-                  url,
-                  content: req.body.content,
-                  image: json.data.link,
-                  tags: req.body.tags,
-                  frontBanner: req.body.frontBanner,
-                  user: req.user._id,
-                  published: req.body.published,
-                  featured: req.body.featured,
-                });
-
-                newPost.save((err) => {
-                  if (err) {
-                    return next(err);
-                  }
-                  debug(`New post created: ${newPost.title}`);
-                  console.log(newPost);
-                  res.json({ post: newPost });
-                });
-              }
-            })
-            .catch((err) => {
-              return next(err);
+          try {
+            const imgurResponse = await fetch('https://api.imgur.com/3/image', {
+              method: 'POST',
+              headers: {
+                Authorization: `Client-ID ${process.env.IMGUR_CLIENT_ID}`,
+              },
+              body: imgurFormData,
             });
+
+            const imgurData = await imgurResponse.json();
+            req.body.image = imgurData.data.link;
+
+            const newPost = new Post({
+              title: req.body.title,
+              url,
+              content: req.body.content,
+              image: imgurData.data.link,
+              tags: req.body.tags,
+              frontBanner: req.body.frontBanner,
+              user: req.user._id,
+              published: req.body.published,
+              featured: req.body.featured,
+            });
+
+            try {
+              const savedPost = await newPost.save();
+              res.status(201).json({ post: savedPost });
+            } catch (error) {
+              return next(error);
+            }
+          } catch (error) {
+            return next(error);
+          }
         } else {
           const newPost = new Post({
             title: req.body.title,
@@ -135,18 +132,16 @@ exports.post_create_post = [
             featured: req.body.featured,
           });
 
-          newPost.save((err) => {
-            if (err) {
-              return next(err);
-            }
-            debug(`New post created: ${newPost.title}`);
-            console.log(newPost);
-            res.json({ post: newPost });
-          });
+          try {
+            const savedPost = await newPost.save();
+            res.status(201).json({ post: savedPost });
+          } catch (error) {
+            return next(error);
+          }
         }
       }
     } else {
-      res.send('You are not authorized to create a post.').status(401);
+      res.status(403).send('You are not authorized to create a post.');
     }
   },
 ];
