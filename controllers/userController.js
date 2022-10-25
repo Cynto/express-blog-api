@@ -86,7 +86,7 @@ exports.user_create_post = [
         errors: errors.array(),
       });
     } else {
-      User.findOne({ email: req.body.email }, (err, user) => {
+      User.findOne({ email: req.body.email.toLowerCase() }, (err, user) => {
         if (err) {
           return next(err);
         }
