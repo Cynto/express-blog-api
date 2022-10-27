@@ -238,6 +238,8 @@ exports.post_published_get = (req, res, next) => {
           firstName: '$user.firstName',
           lastName: '$user.lastName',
         },
+        createdAt: 1,
+        updatedAt: 1,
       },
     },
   ]).exec((err, posts) => {
@@ -252,98 +254,104 @@ exports.post_published_get = (req, res, next) => {
 exports.post_list_get = [
   passport.authenticate('jwt', { session: false }),
   (req, res, next) => {
-    let sort = req.headers.sort || '-createdAt';
+    if (req.user.isAdmin) {
+      let sort = req.headers.sort || '-createdAt';
 
-    const limit = Number(req.headers.limit) || 12;
-    if (sort === '-createdAt') {
-      sort = {
-        createdAt: -1,
-      };
-    } else if (sort === 'createdAt') {
-      sort = {
-        createdAt: 1,
-      };
-    } else {
-      sort = {
-        commentsCount: -1,
-      };
-    }
-
-    Post.aggregate([
-      {
-        $lookup: {
-          from: 'comments',
-          localField: '_id',
-          foreignField: 'post',
-          as: 'comments',
-        },
-      },
-      {
-        $lookup: {
-          from: 'replies',
-          localField: 'comments._id',
-          foreignField: 'comment',
-          as: 'replies',
-        },
-      },
-      {
-        $addFields: {
-          commentsCount: {
-            $add: [{ $size: '$comments' }, { $size: '$replies' }],
-          },
-        },
-      },
-      {
-        $addFields: {
-          comments: {
-            $setUnion: ['$comments', '$replies'],
-          },
-        },
-      },
-      {
-        $sort: sort,
-      },
-      {
-        $limit: limit,
-      },
-      {
-        $lookup: {
-          from: 'users',
-          localField: 'user',
-          foreignField: '_id',
-          as: 'user',
-        },
-      },
-      {
-        $unwind: '$user',
-      },
-      {
-        $project: {
-          _id: 1,
-          title: 1,
-          url: 1,
-          content: 1,
-          image: 1,
-          tags: 1,
-          frontBanner: 1,
-          user: 1,
-          published: 1,
-          featured: 1,
-          comments: 1,
-          commentsCount: 1,
-          user: {
-            _id: 1,
-            firstName: '$user.firstName',
-            lastName: '$user.lastName',
-          },
-        },
-      },
-    ]).exec((err, posts) => {
-      if (err) {
-        return next(err);
+      const limit = Number(req.headers.limit) || 12;
+      if (sort === '-createdAt') {
+        sort = {
+          createdAt: -1,
+        };
+      } else if (sort === 'createdAt') {
+        sort = {
+          createdAt: 1,
+        };
+      } else {
+        sort = {
+          commentsCount: -1,
+        };
       }
-      res.json(posts);
-    });
+
+      return Post.aggregate([
+        {
+          $lookup: {
+            from: 'comments',
+            localField: '_id',
+            foreignField: 'post',
+            as: 'comments',
+          },
+        },
+        {
+          $lookup: {
+            from: 'replies',
+            localField: 'comments._id',
+            foreignField: 'comment',
+            as: 'replies',
+          },
+        },
+        {
+          $addFields: {
+            commentsCount: {
+              $add: [{ $size: '$comments' }, { $size: '$replies' }],
+            },
+          },
+        },
+        {
+          $addFields: {
+            comments: {
+              $setUnion: ['$comments', '$replies'],
+            },
+          },
+        },
+        {
+          $sort: sort,
+        },
+        {
+          $limit: limit,
+        },
+        {
+          $lookup: {
+            from: 'users',
+            localField: 'user',
+            foreignField: '_id',
+            as: 'user',
+          },
+        },
+        {
+          $unwind: '$user',
+        },
+        {
+          $project: {
+            _id: 1,
+            title: 1,
+            url: 1,
+            content: 1,
+            image: 1,
+            tags: 1,
+            frontBanner: 1,
+            user: 1,
+            published: 1,
+            featured: 1,
+            comments: 1,
+            commentsCount: 1,
+            user: {
+              _id: 1,
+              firstName: '$user.firstName',
+              lastName: '$user.lastName',
+            },
+            createdAt: 1,
+            updatedAt: 1,
+          },
+        },
+      ], (err, posts) => {
+        if (err) {
+          return next(err);
+        }
+        res.json(posts);
+      })
+    } else {
+      res.status(403).send('You are not authorized to view all posts.');
+    }
   },
 ];
 
