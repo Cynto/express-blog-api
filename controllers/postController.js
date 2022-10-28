@@ -146,133 +146,44 @@ exports.post_create_post = [
   },
 ];
 
-// Display list of published posts.
-exports.post_published_get = (req, res, next) => {
-  // Check sort header for sort order.
-  let sort = req.headers.sort || '-createdAt';
-  const limit = Number(req.headers.limit) || 15;
-
-  if (sort === '-createdAt') {
-    sort = {
-      createdAt: -1,
-    };
-  } else if (sort === 'createdAt') {
-    sort = {
-      createdAt: 1,
-    };
-  } else {
-    sort = {
-      commentsCount: -1,
-    };
-  }
-
-  Post.aggregate([
-    {
-      $match: {
-        published: true,
-      },
-    },
-    {
-      $lookup: {
-        from: 'comments',
-        localField: '_id',
-        foreignField: 'post',
-        as: 'comments',
-      },
-    },
-    {
-      $lookup: {
-        from: 'replies',
-        localField: 'comments._id',
-        foreignField: 'comment',
-        as: 'replies',
-      },
-    },
-    {
-      $addFields: {
-        commentsCount: {
-          $add: [{ $size: '$comments' }, { $size: '$replies' }],
-        },
-      },
-    },
-    {
-      $addFields: {
-        comments: {
-          $setUnion: ['$comments', '$replies'],
-        },
-      },
-    },
-
-    {
-      $sort: sort,
-    },
-    {
-      $limit: limit,
-    },
-    {
-      $lookup: {
-        from: 'users',
-        localField: 'user',
-        foreignField: '_id',
-        as: 'user',
-      },
-    },
-    {
-      $unwind: '$user',
-    },
-    {
-      $project: {
-        _id: 1,
-        title: 1,
-        url: 1,
-        content: 1,
-        image: 1,
-        tags: 1,
-        frontBanner: 1,
-        user: 1,
-        published: 1,
-        featured: 1,
-        comments: 1,
-        user: {
-          _id: 1,
-          firstName: '$user.firstName',
-          lastName: '$user.lastName',
-        },
-        createdAt: 1,
-        updatedAt: 1,
-      },
-    },
-  ]).exec((err, posts) => {
+// Display list of all posts.
+exports.post_list_get = (req, res, next) => {
+  passport.authenticate('jwt', { session: false }, (err, user, info) => {
     if (err) {
       return next(err);
     }
-    res.json(posts);
-  });
-};
+   
+    let sort = req.headers.sort || '-createdAt';
+    let allPosts = req.headers.allposts || false;
+    const limit = Number(req.headers.limit) || 12;
 
-// Display list of all posts.
-exports.post_list_get = [
-  passport.authenticate('jwt', { session: false }),
-  (req, res, next) => {
-    if (req.user.isAdmin) {
-      let sort = req.headers.sort || '-createdAt';
+    if (sort === '-createdAt') {
+      sort = {
+        createdAt: -1,
+      };
+    } else if (sort === 'createdAt') {
+      sort = {
+        createdAt: 1,
+      };
+    } else {
+      sort = {
+        commentsCount: -1,
+      };
+    }
+  
+    if (!user || user.isAdmin === false) {
+      allPosts = false;
+    } else if (user.isAdmin === true && allPosts === 'true') {
+      allPosts = true;
+    }
 
-      const limit = Number(req.headers.limit) || 12;
-      if (sort === '-createdAt') {
-        sort = {
-          createdAt: -1,
-        };
-      } else if (sort === 'createdAt') {
-        sort = {
-          createdAt: 1,
-        };
-      } else {
-        sort = {
-          commentsCount: -1,
-        };
-      }
-
-      return Post.aggregate([
+    return Post.aggregate(
+      [
+        {
+          $match: {
+            published: allPosts ? { $in: [true, false] } : true,
+          },
+        },
         {
           $lookup: {
             from: 'comments',
@@ -343,18 +254,17 @@ exports.post_list_get = [
             updatedAt: 1,
           },
         },
-      ], (err, posts) => {
+      ],
+      (err, posts) => {
         if (err) {
           return next(err);
         }
-        res.json(posts);
-      })
-    } else {
-      res.status(403).send('You are not authorized to view all posts.');
-    }
-  },
-];
 
+        res.json(posts);
+      }
+    );
+  })(req, res, next);
+};
 // Display single post page.
 exports.post_detail_get = (req, res, next) => {
   Post.findOne({ url: req.params.url })
@@ -450,7 +360,7 @@ exports.post_update_put = [
           return res.status(404).send('Post not found.');
         }
         if (post.user.toString() !== req.user._id.toString()) {
-          console.log('hi');
+         
           return res
 
             .send('You are not authorized to edit this post.')
@@ -483,7 +393,7 @@ exports.post_update_put = [
           })
             .then((response) => response.json())
             .then((json) => {
-              console.log(json);
+             
               if (json.success) {
                 post.title = title;
                 post.url = url;
