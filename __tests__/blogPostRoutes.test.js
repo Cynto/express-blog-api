@@ -330,13 +330,14 @@ describe('blog post routes', () => {
         .post('/users/login')
         .send({ email: adminPayload.email, password: adminPayload.password });
 
-      for (let i = 0; i <= 24; i++) {
+      for (let i = 0; i <= 40; i++) {
         const newPost = await new Post({
           ...validPostPayload,
           title: `test title ${i}`,
           content: `test content ${i}`,
           url: `test-title-${i}`,
           user: tokenRes.body.user._id,
+          published: i % 2 === 0,
           comments: [],
         });
         if (i === 3) {
@@ -354,13 +355,21 @@ describe('blog post routes', () => {
       }
     });
 
-    it('should return 401 if user is not logged in', async () => {
+    it('should return 500 if passport.authenticate throws an error', async () => {
+      jest
+        .spyOn(passport, 'authenticate')
+        .mockImplementationOnce((strategy, options, callback) => {
+          return (req, res, next) => {
+            return callback(new Error('error'), null, null);
+          };
+        });
+
       const res = await request(app).get('/posts');
 
-      expect(res.statusCode).toEqual(401);
+      expect(res.statusCode).toEqual(500);
     });
 
-    it('should return 403 if user is not admin', async () => {
+    it('should not return unpublished posts if user is not an admin', async () => {
       const tokenRes = await request(app)
         .post('/users/login')
         .send({ email: userPayload.email, password: userPayload.password });
@@ -368,52 +377,34 @@ describe('blog post routes', () => {
 
       const res = await request(app)
         .get('/posts')
-        .set('Authorization', `Bearer ${token}`);
+        .set({
+          Authorization: `Bearer ${token}`,
+          allposts: 'true',
+        });
 
-      expect(res.statusCode).toEqual(403);
-    });
+      expect(res.body.length).toEqual(12);
 
-    it('should return 200 if user is admin', async () => {
-      const tokenRes = await request(app)
-        .post('/users/login')
-        .send({ email: adminPayload.email, password: adminPayload.password });
-      const token = tokenRes.body.token;
-
-      const res = await request(app)
-        .get('/posts')
-        .set('Authorization', `Bearer ${token}`);
-
-      expect(res.statusCode).toEqual(200);
+      res.body.forEach((post) => {
+        expect(post.published).toEqual(true);
+      });
     });
 
     it('should return 12 posts if limit is not specified', async () => {
-      const tokenRes = await request(app)
-        .post('/users/login')
-        .send({ email: adminPayload.email, password: adminPayload.password });
-      const token = tokenRes.body.token;
-
-      const res = await request(app)
-        .get('/posts')
-        .set('Authorization', `Bearer ${token}`);
+      const res = await request(app).get('/posts');
 
       expect(res.body.length).toEqual(12);
     });
 
     it('should return 15 posts if limit is set to 15', async () => {
-      const tokenRes = await request(app)
-        .post('/users/login')
-        .send({ email: adminPayload.email, password: adminPayload.password });
-      const token = tokenRes.body.token;
-
-      const res = await request(app)
-        .get('/posts?limit=15')
-        .set('limit', '15')
-        .set('Authorization', `Bearer ${token}`);
+      const res = await request(app).get('/posts?limit=15').set({
+        allposts: 'true',
+        limit: '15',
+      });
 
       expect(res.body.length).toEqual(15);
     });
 
-    it('should return posts sorted by createdAt in descending order', async () => {
+    it('should return 40 posts, if user is admin and all posts is set to true and limit is set to 40', async () => {
       const tokenRes = await request(app)
         .post('/users/login')
         .send({ email: adminPayload.email, password: adminPayload.password });
@@ -421,7 +412,17 @@ describe('blog post routes', () => {
 
       const res = await request(app)
         .get('/posts')
-        .set('Authorization', `Bearer ${token}`);
+        .set({
+          Authorization: `Bearer ${token}`,
+          allposts: 'true',
+          limit: '40',
+        });
+
+      expect(res.body.length).toEqual(40);
+    });
+
+    it('should return posts sorted by createdAt in descending order', async () => {
+      const res = await request(app).get('/posts');
 
       const sortedPosts = posts.sort((a, b) => {
         return new Date(b.createdAt) - new Date(a.createdAt);
@@ -431,15 +432,9 @@ describe('blog post routes', () => {
     });
 
     it('should return posts sorted by createdAt in ascending order', async () => {
-      const tokenRes = await request(app)
-        .post('/users/login')
-        .send({ email: adminPayload.email, password: adminPayload.password });
-      const token = tokenRes.body.token;
-
       const res = await request(app)
         .get('/posts?sort=createdAt')
-        .set('sort', 'createdAt')
-        .set('Authorization', `Bearer ${token}`);
+        .set('sort', 'createdAt');
 
       const sortedPosts = posts.sort((a, b) => {
         return new Date(a.createdAt) - new Date(b.createdAt);
@@ -456,8 +451,11 @@ describe('blog post routes', () => {
 
       const res = await request(app)
         .get('/posts?sort=commentCount')
-        .set('sort', 'commentCount')
-        .set('Authorization', `Bearer ${token}`);
+        .set({
+          Authorization: `Bearer ${token}`,
+          sort: 'commentCount',
+          allposts: true,
+        });
 
       const sortedPosts = posts.sort((a, b) => {
         return b.comments.length - a.comments.length;
@@ -467,20 +465,15 @@ describe('blog post routes', () => {
     });
 
     it('should return 500 if Post.aggregate callback returns error', async () => {
-      const tokenRes = await request(app)
-        .post('/users/login')
-        .send({ email: adminPayload.email, password: adminPayload.password });
-      const token = tokenRes.body.token;
-
       jest.spyOn(Post, 'aggregate').mockImplementationOnce((agg, callback) => {
         callback(new Error('test error'), null);
       });
 
-      const res = await request(app)
-        .get('/posts')
-        .set('Authorization', `Bearer ${token}`);
+      const res = await request(app).get('/posts');
 
       expect(res.statusCode).toEqual(500);
     });
   });
+
+  
 });
