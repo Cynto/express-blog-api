@@ -475,5 +475,108 @@ describe('blog post routes', () => {
     });
   });
 
-  
+  describe('GET /posts/:url', () => {
+    beforeAll(async () => {
+      await mongoose.connection.db.dropCollection('posts');
+      const tokenRes = await request(app)
+        .post('/users/login')
+        .send({ email: adminPayload.email, password: adminPayload.password });
+      const token = tokenRes.body.token;
+
+      const newPost = await new Post({
+        ...validPostPayload,
+        title: `test title`,
+        content: `test content`,
+        url: `test-title`,
+        user: tokenRes.body.user._id,
+        published: true,
+        comments: [],
+      });
+      const unpublishedPost = await new Post({
+        ...validPostPayload,
+        title: `test title2`,
+        content: `test content`,
+        url: `test-title2`,
+        user: tokenRes.body.user._id,
+        published: false,
+        comments: [],
+      });
+
+      const newComment = await new Comment({
+        content: 'test comment',
+        user: tokenRes.body.user._id,
+        post: newPost._id,
+      });
+      const savedComment = await newComment.save();
+      newPost.comments = [savedComment._id];
+
+      const savedPost = await newPost.save();
+      const savedUnpublishedPost = await unpublishedPost.save();
+
+      posts.push(savedPost);
+      posts.push(savedUnpublishedPost);
+    });
+
+    it('should return 500 if Post.findOne throws error', async () => {
+      jest.spyOn(Post, 'findOne').mockImplementationOnce(() => {
+        throw new Error('test error');
+      });
+
+      const res = await request(app).get('/posts/test-title');
+
+      expect(res.statusCode).toEqual(500);
+    });
+
+    it('should return 500 if passport.authenticate throws an error when post is unpublished', async () => {
+      jest
+        .spyOn(passport, 'authenticate')
+        .mockImplementationOnce((strategy, options, callback) => {
+          return (req, res, next) => {
+            return callback(new Error('error'), null, null);
+          };
+        });
+
+      const res = await request(app).get('/posts/test-title2');
+
+      expect(res.statusCode).toEqual(500);
+    });
+
+    it('should return 404 if post is not found', async () => {
+      const res = await request(app).get('/posts/test-title-3');
+
+      expect(res.statusCode).toEqual(404);
+    });
+
+    it('should return 403 if post is not published and user is not an admin', async () => {
+      const tokenRes = await request(app)
+        .post('/users/login')
+        .send({ email: userPayload.email, password: userPayload.password });
+      const token = tokenRes.body.token;
+
+      const res = await request(app)
+        .get('/posts/test-title2')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.statusCode).toEqual(403);
+    });
+
+    it('should return post if post is published', async () => {
+      const res = await request(app).get('/posts/test-title');
+
+      expect(res.statusCode).toEqual(200);
+    });
+
+    it('should return 200 if post is unpublished and user is admin', async () => {
+      const tokenRes = await request(app)
+        .post('/users/login')
+        .send({ email: adminPayload.email, password: adminPayload.password });
+      const token = tokenRes.body.token;
+
+      const res = await request(app)
+        .get('/posts/test-title2')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.statusCode).toEqual(200);
+    });
+  });
 });
