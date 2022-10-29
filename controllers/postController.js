@@ -152,7 +152,7 @@ exports.post_list_get = (req, res, next) => {
     if (err) {
       return next(err);
     }
-   
+
     let sort = req.headers.sort || '-createdAt';
     let allPosts = req.headers.allposts || false;
     const limit = Number(req.headers.limit) || 12;
@@ -170,7 +170,7 @@ exports.post_list_get = (req, res, next) => {
         commentsCount: -1,
       };
     }
-  
+
     if (!user || user.isAdmin === false) {
       allPosts = false;
     } else if (user.isAdmin === true && allPosts === 'true') {
@@ -266,42 +266,43 @@ exports.post_list_get = (req, res, next) => {
   })(req, res, next);
 };
 // Display single post page.
-exports.post_detail_get = (req, res, next) => {
-  Post.findOne({ url: req.params.url })
-    .lean()
-    .populate('user', 'firstName lastName')
-    .populate({
-      path: 'comments',
-      populate: {
-        path: 'user',
-        select: 'firstName lastName',
-        model: User,
-      },
-    })
+exports.post_detail_get = async (req, res, next) => {
+  try {
+    const post = await Post.findOne({ url: req.params.url })
+      .lean()
+      .populate('user', 'firstName lastName')
+      .populate({
+        path: 'comments',
+        populate: {
+          path: 'user',
+          select: 'firstName lastName',
+          model: User,
+        },
+      });
 
-    .exec((err, post) => {
-      if (err) {
-        return next(err);
-      }
-      if (!post) {
-        return res
-          .json({
-            message: 'Post not found.',
-          })
-          .status(404);
-      }
-
-      if (!post.published) {
-        return res
-          .json({
-            post: post,
-            authorized: false,
-          })
-          .status(403);
-      } else {
-        res.json({ post });
-      }
-    });
+    if (!post) {
+      return res.status(404).json({
+        post: null,
+      });
+    }
+    if (post.published === false) {
+      passport.authenticate('jwt', { session: false }, (err, user, info) => {
+        if (err) {
+          return next(err);
+        }
+        if (!user || user.isAdmin === false) {
+          return res.status(403).json({ post: post, authorized: false });
+        }
+        if (user.isAdmin === true) {
+          return res.status(200).json({ post });
+        }
+      })(req, res, next);
+    } else {
+      return res.status(200).json({ post });
+    }
+  } catch (error) {
+    return next(error);
+  }
 };
 
 // Handle post update on POST.
@@ -360,7 +361,6 @@ exports.post_update_put = [
           return res.status(404).send('Post not found.');
         }
         if (post.user.toString() !== req.user._id.toString()) {
-         
           return res
 
             .send('You are not authorized to edit this post.')
@@ -393,7 +393,6 @@ exports.post_update_put = [
           })
             .then((response) => response.json())
             .then((json) => {
-             
               if (json.success) {
                 post.title = title;
                 post.url = url;
