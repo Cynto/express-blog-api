@@ -1,49 +1,16 @@
 const Post = require('../models/post');
 const User = require('../models/user');
-const { body, validationResult } = require('express-validator');
+const { validationResult } = require('express-validator');
 const passport = require('passport');
 const debug = require('debug')('postController');
+const validator = require('../utils/validators.js');
 
 // Handle post create on POST.
 exports.post_create_post = [
   passport.authenticate('jwt', { session: false }),
 
   // Validate fields.
-  body('title')
-    .isLength({ min: 5 })
-    .withMessage('Title must include at least 5 characters.')
-    .isLength({ max: 75 })
-    .withMessage('Title must not include over 75 characters.')
-    .trim(),
-  body('content')
-    .isLength({ min: 5 })
-    .withMessage('Content must include at least 5 characters.')
-    .isLength({ max: 10000 })
-    .withMessage('Content must not include over 10000 characters.')
-    .trim(),
-  body('image', 'Image must be a valid URL.').isURL().trim(),
-  body('tags')
-    .isArray({})
-    .custom((value) => {
-      if (value.length > 20) {
-        throw new Error('Tags must not include over 20 tags.');
-      }
-      if (value.length === 0) {
-        throw new Error('Tags must include at least 1 tag.');
-      }
-      return true;
-    })
-    .withMessage('There must be between 1 and 20 tags.')
-    .isLength({ min: 4, max: 20 })
-    .withMessage('Each tag must include between 4 and 20 characters.'),
-  body('published')
-    .isBoolean()
-    .withMessage('Published must be a boolean.')
-    .trim(),
-  body('featured')
-    .isBoolean()
-    .withMessage('Featured must be a boolean.')
-    .trim(),
+  ...validator.validatePost,
   // Process request after validation and sanitization.
   async (req, res, next) => {
     if (req.user.isAdmin) {
@@ -286,43 +253,7 @@ exports.post_detail_get = async (req, res, next) => {
 exports.post_update_put = [
   passport.authenticate('jwt', { session: false }),
   // Validate fields.
-  body('title')
-    .isLength({ min: 5 })
-    .withMessage('Title must include at least 5 characters.')
-    .isLength({ max: 75 })
-    .withMessage('Title must not include over 75 characters.')
-    .trim(),
-
-  body('content')
-    .isLength({ min: 5 })
-    .withMessage('Content must include at least 5 characters.')
-    .isLength({ max: 10000 })
-    .withMessage('Content must not include over 10000 characters.')
-    .trim(),
-  body('image', 'Image must be a valid URL.').isURL().trim(),
-  body('tags')
-    .isArray({})
-    .custom((value) => {
-      if (value.length > 20) {
-        throw new Error('Tags must not include over 20 tags.');
-      }
-      if (value.length === 0) {
-        throw new Error('Tags must include at least 1 tag.');
-      }
-      return true;
-    })
-    .withMessage('There must be between 1 and 20 tags.')
-    .isLength({ min: 4, max: 20 })
-    .withMessage('Each tag must include between 4 and 20 characters.'),
-  body('published')
-    .isBoolean()
-    .withMessage('Published must be a boolean.')
-    .trim(),
-  body('featured')
-    .isBoolean()
-    .withMessage('Featured must be a boolean.')
-    .trim(),
-
+  ...validator.validatePost,
   async (req, res, next) => {
     if (req.user.isAdmin) {
       const errors = validationResult(req);
@@ -401,36 +332,30 @@ exports.post_update_put = [
 
 // Handle post delete on DELETE.
 exports.post_delete_post = (req, res, next) => {
-  passport.authenticate('jwt', { session: false }, (err, user) => {
+  passport.authenticate('jwt', { session: false }, async (err, user) => {
     if (err) {
       return next(err);
     }
     if (!user) {
-      return res.status(401);
+      return res.status(401).send('You must be logged in to delete a post.');
     }
     if (!user.isAdmin) {
-      return res.status(403);
+      return res.status(403).send('You are not authorized to delete a post.');
     }
-    Post.findByIdAndDelete(req.params.id, (err, post) => {
-      if (err) {
-        return next(err);
-      }
+    try {
+      const post = await Post.findByIdAndDelete(req.params.id);
+
       if (!post) {
-        return res
-          .json({
-            status: 404,
-            message: 'Post not found.',
-          })
-          .status(404);
-      } else {
-        debug(`Post deleted: ${post.title}`);
-        return res
-          .json({
-            status: 204,
-            message: 'Post deleted.',
-          })
-          .status(204);
+        return res.status(404).json({
+          status: 404,
+        });
       }
-    });
+      debug(`Post deleted: ${post.title}`);
+      return res.status(204).json({
+        status: 204,
+      });
+    } catch (error) {
+      return next(error);
+    }
   })(req, res, next);
 };
