@@ -4,6 +4,7 @@ const request = require('supertest');
 const express = require('express');
 const mongoose = require('mongoose');
 const Post = require('../models/post');
+const setupMongoMemory = require('../setupMongoMemory');
 
 const app = express();
 require('../config/passport');
@@ -47,6 +48,7 @@ describe('Blog Post Routes', () => {
   let posts = [];
   let unpublishedPost;
   beforeAll(async () => {
+    await setupMongoMemory();
     await request(app).post('/users').send(userPayload);
     await request(app).post('/users').send(adminPayload);
 
@@ -236,13 +238,16 @@ describe('Blog Post Routes', () => {
     });
 
     it('should return 201 and post object if post is created without first having imgur link', async () => {
-      jest.spyOn(global, 'fetch').mockResolvedValueOnce({
-        json: async () => ({
-          data: {
-            link: 'https://i.imgur.com/123.jpg',
-          },
-        }),
-      });
+      jest.spyOn(global, 'fetch').mockImplementationOnce(() =>
+        Promise.resolve({
+          json: () =>
+            Promise.resolve({
+              data: {
+                link: 'https://i.imgur.com/123.jpg',
+              },
+            }),
+        })
+      );
 
       const res = await request(app)
         .post('/posts')
