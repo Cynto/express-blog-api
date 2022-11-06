@@ -5,8 +5,6 @@
 
 module.exports = {
   testEnvironment: 'node',
-  globalSetup: './globalSetup.js',
-  globalTeardown: './globalTeardown.js',
   setupFilesAfterEnv: ['./setupJest.js'],
 
   // All imported modules in your tests should be mocked automatically

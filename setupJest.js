@@ -12,10 +12,11 @@ beforeEach(async () => {
   jest.clearAllMocks();
   jest.restoreAllMocks();
 });
-beforeAll(async () => {
-  await mongoose.connect(process.env['MONGO_URI']);
-});
 
 afterAll(async () => {
   await mongoose.disconnect();
+  const instances = global.__MONGOINSTANCES;
+  instances.map(async (instance) => {
+    await instance.stop();
+  });
 });
