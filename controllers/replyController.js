@@ -1,5 +1,3 @@
-const User = require('../models/user');
-const Post = require('../models/post');
 const Comment = require('../models/comment');
 const Reply = require('../models/reply');
 const { body, validationResult } = require('express-validator');
@@ -19,109 +17,100 @@ exports.reply_create_post = [
     .trim(),
 
   // Process request after validation and sanitization.
-  (req, res, next) => {
+  async (req, res, next) => {
     // Extract the validation errors from a request.
     const errors = validationResult(req);
 
     if (!errors.isEmpty()) {
       // There are errors. Render form again with sanitized values/error messages.
-      res.status(401).send({
+      res.status(400).send({
         errors: errors.array(),
       });
     } else {
+      let comment;
+
+      try {
+        comment = await Comment.findById(req.params.commentId);
+        if (!comment) {
+          return res.status(404).send({
+            errors: [{ msg: 'Comment not found.' }],
+          });
+        }
+      } catch (err) {
+        return next(err);
+      }
+
       const reply = new Reply({
         content: req.body.content,
         comment: req.body.comment,
         user: req.user._id,
         originalUser: req.body.originalUser,
       });
-      reply.save((err) => {
-        if (err) {
-          return next(err);
-        }
-        debug(`Reply created: ${reply}`);
-        Comment.findById(req.body.comment, (err, comment) => {
-          if (err) {
-            return next(err);
-          }
-          comment.replies.push(reply);
-          comment.save((err) => {
-            if (err) {
-              return next(err);
-            }
-            debug(`Reply added to comment: ${comment}`);
-          });
-        });
-        res
-          .json({
-            reply: reply,
-          })
-          .status(201);
-      });
+      try {
+        const savedReply = await reply.save();
+        comment.replies.push(reply);
+        comment.save();
+        debug(`Reply added to comment: ${comment.title}`);
+
+        return res.status(201).json({ reply: savedReply });
+      } catch (err) {
+        return next(err);
+      }
     }
   },
 ];
 
 // get all replies for a comment
-exports.reply_list_get = (req, res, next) => {
-  Reply.find({
-    comment: req.params.commentId,
-  })
-    .populate('user', 'firstName lastName')
-    .populate('originalUser', 'firstName lastName')
-    .limit(10)
-    .exec((err, replies) => {
-      if (err) {
-        return next(err);
-      }
-
-      res.json({ replies });
-    });
+exports.reply_list_get = async (req, res, next) => {
+  try {
+    const replies = await Reply.find({ comment: req.params.commentId })
+      .populate('user', 'firstName lastName')
+      .populate('originalUser', 'firstName lastName')
+      .limit(10);
+    if (replies.length === 0) {
+      return res.status(404).send({
+        errors: [{ msg: 'No replies found.' }],
+      });
+    }
+    return res.status(200).json({ replies });
+  } catch (err) {
+    return next(err);
+  }
 };
 
 // Handle reply delete on DELETE.
 exports.reply_delete_delete = [
   passport.authenticate('jwt', { session: false }),
-  (req, res, next) => {
-    Reply.findById(req.params.id, (err, reply) => {
-      if (err) {
-        return next(err);
-      }
+  async (req, res, next) => {
+    let reply;
+    try {
+      reply = await Reply.findById(req.params.replyId);
       if (!reply) {
         return res.status(404).send({
-          message: 'Reply not found.',
+          errors: [{ msg: 'Reply not found.' }],
         });
       }
       if (reply.user.toString() !== req.user._id.toString()) {
-        return res.status(401).send({
-          message: 'You are not authorized to delete this reply.',
+        return res.status(403).send({
+          errors: [{ msg: 'Unauthorized.' }],
         });
       }
-      reply.remove((err) => {
-        if (err) {
-          return next(err);
-        }
-        // delete the reply from the comment
-        Comment.findById(reply.comment, (err, comment) => {
-          if (err) {
-            return next(err);
-          }
-          comment.replies.pull(reply);
-          comment.save((err) => {
-            if (err) {
-              return next(err);
-            }
-            debug(`Reply removed from comment: ${comment}`);
-          });
+      const comment = await Comment.findById(req.params.commentId);
+      if (!comment) {
+        return res.status(404).send({
+          errors: [{ msg: 'Comment not found.' }],
         });
+      }
 
-        debug(`Reply deleted: ${reply}`);
-        return res
-          .json({
-            status: 204,
-          })
-          .status(204);
-      });
-    });
+      comment.replies = comment.replies.filter(
+        (reply) => reply.toString() !== req.params.replyId
+      );
+      await comment.save();
+      await reply.remove();
+      debug(`Reply deleted: ${reply}`);
+      return res.status(200).send({ msg: 'Reply deleted.' });
+    } catch (err) {
+      return next(err);
+    }
   },
 ];
