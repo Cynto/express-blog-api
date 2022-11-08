@@ -93,7 +93,7 @@ exports.post_create_post = [
 
 // Display list of all posts.
 exports.post_list_get = (req, res, next) => {
-  passport.authenticate('jwt', { session: false }, (err, user) => {
+  passport.authenticate('jwt', { session: false }, async (err, user) => {
     if (err) {
       return next(err);
     }
@@ -199,12 +199,23 @@ exports.post_list_get = (req, res, next) => {
           },
         },
       ],
-      (err, posts) => {
+      async (err, posts) => {
         if (err) {
           return next(err);
         }
-
-        res.json(posts);
+        if (posts.find((post) => post.featured === true)) {
+          res.json(posts);
+        } else {
+          try {
+            const featuredPost = await Post.findOne({ featured: true });
+            if (featuredPost) {
+              posts.unshift(featuredPost);
+            }
+            res.json(posts);
+          } catch (error) {
+            return next(error);
+          }
+        }
       }
     );
   })(req, res, next);
@@ -249,7 +260,7 @@ exports.post_detail_get = async (req, res, next) => {
   }
 };
 
-// Handle post update on POST.
+// Handle post update on PUT.
 exports.post_update_put = [
   passport.authenticate('jwt', { session: false }),
   // Validate fields.
@@ -310,7 +321,17 @@ exports.post_update_put = [
           return next(error);
         }
       }
-
+      if (featured) {
+        try {
+          await Post.updateMany(
+            { featured: true },
+            { $set: { featured: false } }
+          );
+          console.log('hi');
+        } catch (error) {
+          return next(error);
+        }
+      }
       try {
         post.title = title;
         post.content = content;
