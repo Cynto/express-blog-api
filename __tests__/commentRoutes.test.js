@@ -5,8 +5,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const Post = require('../models/post');
 const Comment = require('../models/comment');
-const setupMongoMemory = require('../setupMongoMemory');
-
+const initialiseMongoServer = require('../config/mongoConfigTesting');
 require('../config/passport');
 
 const app = express();
@@ -49,7 +48,7 @@ describe('comment routes', () => {
   let validCommentPayload;
   let invalidCommentPayload;
   beforeAll(async () => {
-    await setupMongoMemory();
+    await initialiseMongoServer();
 
     await request(app).post('/users').send(userPayload);
     await request(app).post('/users').send(adminPayload);
@@ -80,13 +79,13 @@ describe('comment routes', () => {
 
   describe('POST /:postId/comments', () => {
     it('should return 401 if user is not logged in', async () => {
-      const res = await request(app).post(`/${post._id}/comments`);
+      const res = await request(app).post(`/posts/${post._id}/comments`);
       expect(res.statusCode).toEqual(401);
     });
 
     it('should return 400 and error array with one value if comment is empty', async () => {
       const res = await request(app)
-        .post(`/${post._id}/comments`)
+        .post(`/posts/${post._id}/comments`)
         .set('Authorization', `Bearer ${userToken}`)
         .send(invalidCommentPayload);
       expect(res.statusCode).toEqual(400);
@@ -107,7 +106,7 @@ describe('comment routes', () => {
       });
 
       const res = await request(app)
-        .post(`/${post._id}/comments`)
+        .post(`/posts/${post._id}/comments`)
         .set('Authorization', `Bearer ${userToken}`)
         .send(validCommentPayload);
       expect(res.statusCode).toEqual(500);
@@ -119,7 +118,7 @@ describe('comment routes', () => {
       });
 
       const res = await request(app)
-        .post(`/${post._id}/comments`)
+        .post(`/posts/${post._id}/comments`)
         .set('Authorization', `Bearer ${userToken}`)
         .send(validCommentPayload);
       expect(res.statusCode).toEqual(500);
@@ -131,7 +130,7 @@ describe('comment routes', () => {
       });
 
       const res = await request(app)
-        .post(`/${post._id}/comments`)
+        .post(`/posts/${post._id}/comments`)
         .set('Authorization', `Bearer ${userToken}`)
         .send(validCommentPayload);
       expect(res.statusCode).toEqual(500);
@@ -139,7 +138,7 @@ describe('comment routes', () => {
 
     it('should return 201 and comment object if comment is valid', async () => {
       const res = await request(app)
-        .post(`/${post._id}/comments`)
+        .post(`/posts/${post._id}/comments`)
         .set('Authorization', `Bearer ${userToken}`)
         .send(validCommentPayload);
       expect(res.statusCode).toEqual(201);
@@ -149,7 +148,7 @@ describe('comment routes', () => {
     it('should add comment to post.comments array', async () => {
       await mongoose.connection.db.dropCollection('comments');
       const res = await request(app)
-        .post(`/${post._id}/comments`)
+        .post(`/posts/${post._id}/comments`)
         .set('Authorization', `Bearer ${userToken}`)
         .send(validCommentPayload);
 
@@ -170,7 +169,7 @@ describe('comment routes', () => {
       await mongoose.connection.db.dropCollection('comments');
 
       await request(app)
-        .post(`/${post._id}/comments`)
+        .post(`/posts/${post._id}/comments`)
         .set('Authorization', `Bearer ${userToken}`)
         .send(validCommentPayload);
     });
@@ -184,7 +183,7 @@ describe('comment routes', () => {
         throw new Error();
       });
 
-      const res = await request(app).get(`/${post._id}/comments`);
+      const res = await request(app).get(`/posts/${post._id}/comments`);
       expect(res.statusCode).toEqual(500);
     });
 
@@ -193,12 +192,12 @@ describe('comment routes', () => {
         throw new Error();
       });
 
-      const res = await request(app).get(`/${post._id}/comments`);
+      const res = await request(app).get(`/posts/${post._id}/comments`);
       expect(res.statusCode).toEqual(500);
     });
 
     it('should return 200 and array of comments if post exists', async () => {
-      const res = await request(app).get(`/${post._id}/comments`);
+      const res = await request(app).get(`/posts/${post._id}/comments`);
       expect(res.statusCode).toEqual(200);
       expect(res.body.comments.length).toEqual(1);
     });
@@ -210,7 +209,7 @@ describe('comment routes', () => {
       await mongoose.connection.db.dropCollection('comments');
 
       const commentRes = await request(app)
-        .post(`/${post._id}/comments`)
+        .post(`/posts/${post._id}/comments`)
         .set('Authorization', `Bearer ${userToken}`)
         .send(validCommentPayload);
       comment = commentRes.body.comment;
@@ -218,21 +217,23 @@ describe('comment routes', () => {
 
     it('should return 401 if user is not logged in', async () => {
       const res = await request(app).delete(
-        `/${post._id}/comments/${comment._id}`
+        `/posts/${post._id}/comments/${comment._id}`
       );
       expect(res.statusCode).toEqual(401);
     });
 
     it('should return 404 if post does not exist', async () => {
       const res = await request(app)
-        .delete('/5f7a1e1f1c9d440000f2c7e0/comments/5f7a1e1f1c9d440000f2c7e0')
+        .delete(
+          '/posts/5f7a1e1f1c9d440000f2c7e0/comments/5f7a1e1f1c9d440000f2c7e0'
+        )
         .set('Authorization', `Bearer ${userToken}`);
       expect(res.statusCode).toEqual(404);
     });
 
     it('should return 404 if comment does not exist', async () => {
       const res = await request(app)
-        .delete(`/${post._id}/comments/5f7a1e1f1c9d440000f2c7e0`)
+        .delete(`/posts/${post._id}/comments/5f7a1e1f1c9d440000f2c7e0`)
         .set('Authorization', `Bearer ${userToken}`);
       expect(res.statusCode).toEqual(404);
     });
@@ -241,14 +242,14 @@ describe('comment routes', () => {
       jest.spyOn(Post, 'findById').mockImplementationOnce(() => null);
 
       const res = await request(app)
-        .delete(`/${post._id}/comments/${comment._id}`)
+        .delete(`/posts/${post._id}/comments/${comment._id}`)
         .set('Authorization', `Bearer ${userToken}`);
       expect(res.statusCode).toEqual(404);
     });
 
     it('should return 403 if user is not the author of the comment', async () => {
       const res = await request(app)
-        .delete(`/${post._id}/comments/${comment._id}`)
+        .delete(`/posts/${post._id}/comments/${comment._id}`)
         .set('Authorization', `Bearer ${adminToken}`);
       expect(res.statusCode).toEqual(403);
     });
@@ -259,7 +260,7 @@ describe('comment routes', () => {
       });
 
       const res = await request(app)
-        .delete(`/${post._id}/comments/${comment._id}`)
+        .delete(`/posts/${post._id}/comments/${comment._id}`)
         .set('Authorization', `Bearer ${userToken}`);
 
       expect(res.statusCode).toEqual(500);
@@ -271,7 +272,7 @@ describe('comment routes', () => {
       });
 
       const res = await request(app)
-        .delete(`/${post._id}/comments/${comment._id}`)
+        .delete(`/posts/${post._id}/comments/${comment._id}`)
         .set('Authorization', `Bearer ${userToken}`);
       expect(res.statusCode).toEqual(500);
     });
@@ -282,7 +283,7 @@ describe('comment routes', () => {
       });
 
       const res = await request(app)
-        .delete(`/${post._id}/comments/${comment._id}`)
+        .delete(`/posts/${post._id}/comments/${comment._id}`)
         .set('Authorization', `Bearer ${userToken}`);
       expect(res.statusCode).toEqual(500);
     });
@@ -293,14 +294,14 @@ describe('comment routes', () => {
       });
 
       const res = await request(app)
-        .delete(`/${post._id}/comments/${comment._id}`)
+        .delete(`/posts/${post._id}/comments/${comment._id}`)
         .set('Authorization', `Bearer ${userToken}`);
       expect(res.statusCode).toEqual(500);
     });
 
     it('should return 200 if comment exists and is successfully deleted', async () => {
       const res = await request(app)
-        .delete(`/${post._id}/comments/${comment._id}`)
+        .delete(`/posts/${post._id}/comments/${comment._id}`)
         .set('Authorization', `Bearer ${userToken}`);
       expect(res.statusCode).toEqual(200);
     });

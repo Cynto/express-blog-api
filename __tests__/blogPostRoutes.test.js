@@ -4,7 +4,7 @@ const request = require('supertest');
 const express = require('express');
 const mongoose = require('mongoose');
 const Post = require('../models/post');
-const setupMongoMemory = require('../setupMongoMemory');
+const initialiseMongoServer = require('../config/mongoConfigTesting');
 
 const app = express();
 require('../config/passport');
@@ -48,7 +48,7 @@ describe('Blog Post Routes', () => {
   let posts = [];
   let unpublishedPost;
   beforeAll(async () => {
-    await setupMongoMemory();
+    await initialiseMongoServer();
     await request(app).post('/users').send(userPayload);
     await request(app).post('/users').send(adminPayload);
 

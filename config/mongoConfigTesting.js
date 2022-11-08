@@ -1,10 +1,11 @@
 const { MongoMemoryServer } = require('mongodb-memory-server');
 const mongoose = require('mongoose');
-const config = require('./utils/config');
+const config = require('../utils/config');
 
-const setupMongoMemory = async () => {
+const initialiseMongoServer = async () => {
   const instance = await MongoMemoryServer.create();
   const uri = instance.getUri();
+
   process.env.MONGO_URI = uri.slice(0, uri.lastIndexOf('/'));
   if (global.__MONGOINSTANCES) {
     global.__MONGOINSTANCES.push(instance);
@@ -14,4 +15,4 @@ const setupMongoMemory = async () => {
   await mongoose.connection.db.dropDatabase();
 };
 
-module.exports = setupMongoMemory;
+module.exports = initialiseMongoServer;

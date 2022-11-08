@@ -5,7 +5,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const Comment = require('../models/comment');
 const Reply = require('../models/reply');
-const setupMongoMemory = require('../setupMongoMemory');
+const initialiseMongoServer = require('../config/mongoConfigTesting');
 
 require('../config/passport');
 
@@ -52,7 +52,7 @@ describe('reply routes', () => {
   let invalidReplyPayload;
 
   beforeAll(async () => {
-    await setupMongoMemory();
+    await initialiseMongoServer();
 
     await request(app).post('/users').send(userPayload);
     await request(app).post('/users').send(adminPayload);
@@ -76,7 +76,7 @@ describe('reply routes', () => {
       content: 'test comment',
     };
     const commentRes = await request(app)
-      .post(`/${post._id}/comments`)
+      .post(`/posts/${post._id}/comments`)
       .set('Authorization', `Bearer ${userToken}`)
       .send(commentPayload);
     comment = commentRes.body.comment;

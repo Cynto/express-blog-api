@@ -2,15 +2,16 @@ const index = require('../routes/index.js');
 const cookieParser = require('cookie-parser');
 const request = require('supertest');
 const express = require('express');
-const app = express();
-require('../config/passport');
+
 const mongoose = require('mongoose');
 const passport = require('passport');
 const userController = require('../controllers/userController');
 const User = require('../models/user');
 const bcrypt = require('bcryptjs');
-const setupMongoMemory = require('../setupMongoMemory');
+const initialiseMongoServer = require('../config/mongoConfigTesting');
 
+require('../config/passport');
+const app = express();
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 app.use(cookieParser());
@@ -26,7 +27,7 @@ const userObjPayload = {
 
 describe('user routes', () => {
   beforeAll(async () => {
-    await setupMongoMemory();
+    await initialiseMongoServer();
   });
   afterEach(async () => {
     await mongoose.connection.db.dropDatabase();
