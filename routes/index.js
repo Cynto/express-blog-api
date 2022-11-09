@@ -44,7 +44,7 @@ router.get('/posts/:postId/comments', commentController.comment_get);
 
 // DELETE request to delete comment.
 router.delete(
-  '/:postId/comments/:commentId',
+  '/posts/:postId/comments/:commentId',
   commentController.comment_delete_delete
 );
 
