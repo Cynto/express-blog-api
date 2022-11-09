@@ -94,7 +94,7 @@ describe('comment routes', () => {
 
     it('should return 404 if post does not exist', async () => {
       const res = await request(app)
-        .post('/5f7a1e1f1c9d440000f2c7e0/comments')
+        .post('/posts/5f7a1e1f1c9d440000f2c7e0/comments')
         .set('Authorization', `Bearer ${userToken}`)
         .send(validCommentPayload);
       expect(res.statusCode).toEqual(404);
@@ -174,7 +174,9 @@ describe('comment routes', () => {
         .send(validCommentPayload);
     });
     it('should return 404 if post does not exist', async () => {
-      const res = await request(app).get('/5f7a1e1f1c9d440000f2c7e0/comments');
+      const res = await request(app).get(
+        '/posts/5f7a1e1f1c9d440000f2c7e0/comments'
+      );
       expect(res.statusCode).toEqual(404);
     });
 
