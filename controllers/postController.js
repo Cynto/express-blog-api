@@ -321,13 +321,13 @@ exports.post_update_put = [
           return next(error);
         }
       }
-      if (featured) {
+
+      if (featured === 'true') {
         try {
           await Post.updateMany(
             { featured: true },
             { $set: { featured: false } }
           );
-          console.log('hi');
         } catch (error) {
           return next(error);
         }
