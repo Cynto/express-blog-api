@@ -40,34 +40,25 @@ router.delete('/posts/:id', postController.post_delete_post);
 router.post('/posts/:postId/comments', commentController.comment_create_post);
 
 // GET request for list of all comments.
-router.get('/posts/:postId/comments', commentController.comment_list_get);
-
-// GET request for one comment.
-router.get('/posts/:postId/comments/:id', commentController.comment_detail_get);
+router.get('/posts/:postId/comments', commentController.comment_get);
 
 // DELETE request to delete comment.
 router.delete(
-  '/posts/:postId/comments/:id',
+  '/:postId/comments/:commentId',
   commentController.comment_delete_delete
 );
 
 /// REPLY ROUTES ///
 
 // POST request for creating Reply.
-router.post(
-  '/posts/:postId/comments/:commentId/replies',
-  replyController.reply_create_post
-);
+router.post('/comments/:commentId/replies', replyController.reply_create_post);
 
 // GET request for list of all replies.
-router.get(
-  '/posts/:postId/comments/:commentId/replies',
-  replyController.reply_list_get
-);
+router.get('/comments/:commentId/replies', replyController.reply_list_get);
 
 // DELETE request to delete reply.
 router.delete(
-  '/posts/:postId/comments/:commentId/replies/:id',
+  '/comments/:commentId/replies/:replyId',
   replyController.reply_delete_delete
 );
 
