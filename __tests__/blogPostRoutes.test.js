@@ -407,6 +407,20 @@ describe('Blog Post Routes', () => {
       expect(res.statusCode).toEqual(500);
     });
 
+    it('should return 500 if featured is true and Post.updateMany throws error', async () => {
+      jest.spyOn(Post, 'updateMany').mockRejectedValueOnce(new Error('error'));
+
+      const res = await request(app)
+        .put(`/posts/${post._id}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          ...validPostPayload,
+          featured: true,
+        });
+
+      expect(res.statusCode).toEqual(500);
+    });
+
     it('should return 500 is post.save() returns error', async () => {
       jest.spyOn(Post.prototype, 'save').mockImplementationOnce(() => {
         throw new Error('error');
@@ -573,6 +587,16 @@ describe('Blog Post Routes', () => {
       });
     });
 
+    it('first item of array should be featured post if aggregate query does not return featured post', async () => {
+      jest.spyOn(Post, 'aggregate').mockImplementationOnce((agg, callback) => {
+        return callback(null, []);
+      });
+
+      const res = await request(app).get('/posts');
+
+      expect(res.body[0].featured).toEqual(true);
+    });
+
     it('should return 12 posts if limit is not specified', async () => {
       const res = await request(app).get('/posts');
 
@@ -641,6 +665,20 @@ describe('Blog Post Routes', () => {
     it('should return 500 if Post.aggregate callback returns error', async () => {
       jest.spyOn(Post, 'aggregate').mockImplementationOnce((agg, callback) => {
         callback(new Error('test error'), null);
+      });
+
+      const res = await request(app).get('/posts');
+
+      expect(res.statusCode).toEqual(500);
+    });
+
+    it('should return 500 if Post.findOne throws error if no featured post is found', async () => {
+      jest.spyOn(Post, 'aggregate').mockImplementationOnce((agg, callback) => {
+        callback(null, []);
+      });
+
+      jest.spyOn(Post, 'findOne').mockImplementationOnce(() => {
+        throw new Error('test error');
       });
 
       const res = await request(app).get('/posts');
