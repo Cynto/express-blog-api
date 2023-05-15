@@ -5,7 +5,7 @@
 This Express blog API was created to complete The Odin
 Project's [Blog API](https://www.theodinproject.com/courses/nodejs/lessons/blog-api) lesson.
 
-You can find a website that uses this API as its backend [here](https://bloggy.vercel.app/)
+You can find a website that uses this API as its backend [here](https://bloggy-cynto.vercel.app/)
 
 ## Features
 
